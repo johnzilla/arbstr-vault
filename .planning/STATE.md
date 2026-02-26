@@ -10,27 +10,27 @@ See: .planning/PROJECT.md (updated 2026-02-26)
 ## Current Position
 
 Phase: 1 of 4 (Foundation)
-Plan: 3 of 5 in current phase
+Plan: 4 of 5 in current phase
 Status: In progress
-Last activity: 2026-02-26 — Completed 01-03: Policy engine, ledger, audit, simulated wallet
+Last activity: 2026-02-26 — Completed 01-04: Payment orchestration, POST /agents/:id/pay, 12 integration tests
 
-Progress: [███░░░░░░░] 15%
+Progress: [████░░░░░░] 20%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
-- Average duration: ~3.7 minutes
-- Total execution time: ~11 minutes
+- Total plans completed: 4
+- Average duration: ~3.8 minutes
+- Total execution time: ~15 minutes
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01-foundation | 3 | ~11 min | ~3.7 min |
+| 01-foundation | 4 | ~15 min | ~3.8 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (3 min), 01-02 (4 min), 01-03 (4 min)
+- Last 5 plans: 01-01 (3 min), 01-02 (4 min), 01-03 (4 min), 01-04 (4 min)
 - Trend: Stable at ~4 min/plan
 
 *Updated after each plan completion*
@@ -57,6 +57,9 @@ Recent decisions affecting current work:
 - agentAuth uses request.server.db (not direct import) — same testability reason as above
 - vitest.config.ts sets env vars before ESM module graph loads — config.ts evaluates at import time, not runtime
 - Agent scope enforcement: agentAuth hook checks :id param against authenticated agent.id, returns 403 on mismatch
+- better-sqlite3 sync constraint: transaction callbacks cannot return promises; payment service uses two-phase sync IMMEDIATE transactions with async wallet call between them
+- POST /agents/:id/pay always returns 200; policy_decision field carries ALLOW/DENY outcome — HTTP status reflects request processing not policy outcome
+- Dual Db type casting: agentsRepo uses full-schema DB; ledger/audit repos use narrow Record<string,never>; cast via unknown at call sites inside transaction
 
 ### Pending Todos
 
@@ -70,5 +73,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Completed 01-02-PLAN.md — agent management API, two-scope auth, 11 integration tests, all green
+Stopped at: Completed 01-04-PLAN.md — payment orchestration, POST /agents/:id/pay, 12 integration tests, 48 total tests green
 Resume file: None

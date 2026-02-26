@@ -17,7 +17,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Payments
 
-- [ ] **PAY-01**: Agent can submit a payment request specifying amount, asset, purpose, destination type, and destination details
+- [x] **PAY-01**: Agent can submit a payment request specifying amount, asset, purpose, destination type, and destination details
 - [x] **PAY-02**: Payment requests work in simulated mode with identical API surface (no real funds moved)
 - [ ] **PAY-03**: Treasury can pay BOLT11 Lightning invoices via LND on behalf of an agent
 - [ ] **PAY-04**: Treasury can mint, melt, and swap Cashu tokens via self-hosted Nutshell mint on behalf of an agent
@@ -41,7 +41,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [x] **OBSV-01**: Append-only audit log records every financial action with timestamp, agent_id, action type, parameters, policy decision, and result
 - [x] **OBSV-02**: Audit log entries are written in the same database transaction as the ledger update they describe
-- [ ] **OBSV-03**: Audit log is filterable by agent_id, action_type, and time range via API
+- [x] **OBSV-03**: Audit log is filterable by agent_id, action_type, and time range via API
 - [x] **OBSV-04**: All wallet private keys, LN macaroons, and Cashu mint credentials are stored only in the Treasury Service
 - [ ] **OBSV-05**: Agent bearer tokens and secrets are masked in all log output
 - [ ] **OBSV-06**: Per-agent configurable balance alert threshold that notifies operator when balance drops below floor
@@ -50,7 +50,7 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Security
 
 - [x] **SEC-01**: Agents authenticate via static bearer tokens — no direct access to wallet keys
-- [ ] **SEC-02**: Policy enforcement and ledger debit happen inside a single atomic database transaction (prevents TOCTOU race conditions)
+- [x] **SEC-02**: Policy enforcement and ledger debit happen inside a single atomic database transaction (prevents TOCTOU race conditions)
 - [x] **SEC-03**: All agent-supplied strings are validated via strict Zod schemas — no free-text fields affect policy routing
 - [ ] **SEC-04**: Lightning payment state machine tracks payment_hash before send and resolves via TrackPaymentV2 (prevents false refunds)
 - [ ] **SEC-05**: LND macaroon is scoped to invoice+offchain operations only (never admin.macaroon)
