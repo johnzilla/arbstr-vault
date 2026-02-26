@@ -12,7 +12,7 @@ Vaultwarden is built in four phases that follow the dependency graph of a financ
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Foundation** - Data model, auth, policy engine, audit log, and simulated wallet — the entire API contract with no real funds
+- [x] **Phase 1: Foundation** - Data model, auth, policy engine, audit log, and simulated wallet — the entire API contract with no real funds
 - [ ] **Phase 2: Lightning Backend** - Real BOLT11 payment execution via LND with correct payment state machine
 - [ ] **Phase 3: Cashu Backend** - Self-hosted Nutshell mint as hot wallet plus automatic payment rail routing
 - [ ] **Phase 4: Operator Experience and Advanced Policy** - Human approval workflow, remaining policy primitives, versioning, and operator endpoints
@@ -36,7 +36,7 @@ Plans:
 - [x] 01-02-PLAN.md — Agent management, auth middleware, and agent API routes
 - [x] 01-03-PLAN.md — Policy engine, ledger module, audit module, and simulated wallet
 - [x] 01-04-PLAN.md — Payment service orchestration and payment API route
-- [ ] 01-05-PLAN.md — Security hardening, token redaction, and full E2E verification
+- [x] 01-05-PLAN.md — Security hardening, token redaction, and full E2E verification
 
 ### Phase 2: Lightning Backend
 **Goal**: Agents can pay real BOLT11 Lightning invoices within their policy limits, with a correct payment state machine that never produces false refunds or double-debits
@@ -76,7 +76,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 4/5 | In Progress|  |
+| 1. Foundation | 5/5 | Complete | 2026-02-26 |
 | 2. Lightning Backend | 0/TBD | Not started | - |
 | 3. Cashu Backend | 0/TBD | Not started | - |
 | 4. Operator Experience and Advanced Policy | 0/TBD | Not started | - |

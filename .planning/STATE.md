@@ -5,32 +5,32 @@
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** Agents can request and execute payments within explicit policy limits, with all keys and connections centralized in the Treasury Service — never in the agents themselves
-**Current focus:** Phase 1 — Foundation
+**Current focus:** Phase 2 — Lightning (phase 1 complete)
 
 ## Current Position
 
-Phase: 1 of 4 (Foundation)
-Plan: 4 of 5 in current phase
-Status: In progress
-Last activity: 2026-02-26 — Completed 01-04: Payment orchestration, POST /agents/:id/pay, 12 integration tests
+Phase: 1 of 4 (Foundation) — COMPLETE
+Plan: 5 of 5 in current phase — COMPLETE
+Status: Phase 1 complete — ready for Phase 2
+Last activity: 2026-02-26 — Completed 01-05: Pino token redaction, security/isolation tests, full E2E lifecycle test, 59 total tests
 
-Progress: [████░░░░░░] 20%
+Progress: [██████░░░░] 25%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 4
-- Average duration: ~3.8 minutes
-- Total execution time: ~15 minutes
+- Total plans completed: 5
+- Average duration: ~4.0 minutes
+- Total execution time: ~21 minutes
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01-foundation | 4 | ~15 min | ~3.8 min |
+| 01-foundation | 5 | ~21 min | ~4.2 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (3 min), 01-02 (4 min), 01-03 (4 min), 01-04 (4 min)
+- Last 5 plans: 01-01 (3 min), 01-02 (4 min), 01-03 (4 min), 01-04 (4 min), 01-05 (6 min)
 - Trend: Stable at ~4 min/plan
 
 *Updated after each plan completion*
@@ -60,6 +60,9 @@ Recent decisions affecting current work:
 - better-sqlite3 sync constraint: transaction callbacks cannot return promises; payment service uses two-phase sync IMMEDIATE transactions with async wallet call between them
 - POST /agents/:id/pay always returns 200; policy_decision field carries ALLOW/DENY outcome — HTTP status reflects request processing not policy outcome
 - Dual Db type casting: agentsRepo uses full-schema DB; ledger/audit repos use narrow Record<string,never>; cast via unknown at call sites inside transaction
+- Pino top-level redact paths: `*.token` wildcard only matches nested fields — explicit `token`, `token_hash`, `raw_token` paths also required for top-level redaction
+- buildApp overloaded to accept BuildAppOptions {db?, loggerStream?} — loggerStream enables test capture of pino output
+- Fail-closed test via paymentsService.processPayment(closedDb) — service layer boundary more reliable than HTTP when agentAuth also uses DB
 
 ### Pending Todos
 
@@ -73,5 +76,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Completed 01-04-PLAN.md — payment orchestration, POST /agents/:id/pay, 12 integration tests, 48 total tests green
+Stopped at: Completed 01-05-PLAN.md — Pino token redaction, security/isolation tests, full E2E lifecycle, 59 total tests green. Phase 1 complete.
 Resume file: None

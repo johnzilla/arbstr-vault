@@ -43,7 +43,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **OBSV-02**: Audit log entries are written in the same database transaction as the ledger update they describe
 - [x] **OBSV-03**: Audit log is filterable by agent_id, action_type, and time range via API
 - [x] **OBSV-04**: All wallet private keys, LN macaroons, and Cashu mint credentials are stored only in the Treasury Service
-- [ ] **OBSV-05**: Agent bearer tokens and secrets are masked in all log output
+- [x] **OBSV-05**: Agent bearer tokens and secrets are masked in all log output
 - [ ] **OBSV-06**: Per-agent configurable balance alert threshold that notifies operator when balance drops below floor
 - [ ] **OBSV-07**: Operator can view all agents, their balances, recent spend, policy state, and daily utilization via API
 
@@ -123,7 +123,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | OBSV-02 | Phase 1 | Complete |
 | OBSV-03 | Phase 1 | Pending |
 | OBSV-04 | Phase 1 | Complete |
-| OBSV-05 | Phase 1 | Pending |
+| OBSV-05 | Phase 1 | Complete |
 | OBSV-06 | Phase 4 | Pending |
 | OBSV-07 | Phase 4 | Pending |
 | SEC-01 | Phase 1 | Complete |
