@@ -29,7 +29,14 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. A payment request that would exceed the per-agent max-transaction limit or daily spend limit is denied before any ledger entry is written
   4. Every financial action and policy decision produces an append-only audit log entry, written in the same database transaction as the ledger update, and retrievable via filtered API query
   5. Agent bearer tokens and wallet credentials never appear in log output; the service starts in fail-closed mode such that a policy engine error produces DENY, not ALLOW
-**Plans**: TBD
+**Plans**: 5 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Project scaffolding, DB schema, config, types, and Fastify app skeleton
+- [ ] 01-02-PLAN.md — Agent management, auth middleware, and agent API routes
+- [ ] 01-03-PLAN.md — Policy engine, ledger module, audit module, and simulated wallet
+- [ ] 01-04-PLAN.md — Payment service orchestration and payment API route
+- [ ] 01-05-PLAN.md — Security hardening, token redaction, and full E2E verification
 
 ### Phase 2: Lightning Backend
 **Goal**: Agents can pay real BOLT11 Lightning invoices within their policy limits, with a correct payment state machine that never produces false refunds or double-debits
@@ -69,7 +76,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 0/TBD | Not started | - |
+| 1. Foundation | 0/5 | Planned | - |
 | 2. Lightning Backend | 0/TBD | Not started | - |
 | 3. Cashu Backend | 0/TBD | Not started | - |
 | 4. Operator Experience and Advanced Policy | 0/TBD | Not started | - |
