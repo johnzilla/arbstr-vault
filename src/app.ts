@@ -5,6 +5,7 @@ import { adminAgentRoutes } from './routes/admin/agents.routes.js';
 import { adminDepositRoutes } from './routes/admin/deposit.routes.js';
 import { agentBalanceRoutes } from './routes/agent/balance.routes.js';
 import { agentHistoryRoutes } from './routes/agent/history.routes.js';
+import { agentPaymentRoutes } from './routes/agent/payments.routes.js';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type * as schema from './db/schema.js';
 import { db as defaultDb } from './db/client.js';
@@ -36,6 +37,7 @@ export function buildApp(injectedDb?: DB) {
   // Agent routes (agent-scoped)
   app.register(agentBalanceRoutes);
   app.register(agentHistoryRoutes);
+  app.register(agentPaymentRoutes);
 
   return app;
 }
