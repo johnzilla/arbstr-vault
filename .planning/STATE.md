@@ -10,28 +10,28 @@ See: .planning/PROJECT.md (updated 2026-02-26)
 ## Current Position
 
 Phase: 1 of 4 (Foundation)
-Plan: 1 of 5 in current phase
+Plan: 3 of 5 in current phase
 Status: In progress
-Last activity: 2026-02-26 — Completed 01-01: Foundation scaffolding, schema, app skeleton
+Last activity: 2026-02-26 — Completed 01-03: Policy engine, ledger, audit, simulated wallet
 
-Progress: [█░░░░░░░░░] 5%
+Progress: [███░░░░░░░] 15%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 1
-- Average duration: ~3 minutes
-- Total execution time: ~3 minutes
+- Total plans completed: 3
+- Average duration: ~3.7 minutes
+- Total execution time: ~11 minutes
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01-foundation | 1 | ~3 min | ~3 min |
+| 01-foundation | 3 | ~11 min | ~3.7 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (3 min)
-- Trend: Baseline established
+- Last 5 plans: 01-01 (3 min), 01-02 (4 min), 01-03 (4 min)
+- Trend: Stable at ~4 min/plan
 
 *Updated after each plan completion*
 
@@ -50,6 +50,9 @@ Recent decisions affecting current work:
 - WAL mode enabled with foreign_keys=ON and synchronous=NORMAL for SQLite performance
 - buildApp() factory pattern separates app construction from server lifecycle
 - Deny-all defaults: policies default to 0 msat limits — agents cannot spend until operator configures
+- REQUIRE_HUMAN_APPROVAL type exists in PolicyOutcome now — trigger path deferred to Phase 4
+- BetterSQLite3Database<Record<string, never>> as module Db type — satisfies TablesRelationalConfig for both db and tx
+- ledgerRepo uses drizzle sql tagged template for COALESCE(SUM(...)) — no first-class sum() in drizzle SQLite
 
 ### Pending Todos
 
@@ -63,5 +66,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Completed 01-01-PLAN.md — foundation scaffolding complete, ready for 01-02
+Stopped at: Completed 01-03-PLAN.md — policy engine, ledger, audit, simulated wallet complete, ready for 01-04
 Resume file: None

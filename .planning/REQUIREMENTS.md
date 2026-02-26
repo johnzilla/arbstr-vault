@@ -18,7 +18,7 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Payments
 
 - [ ] **PAY-01**: Agent can submit a payment request specifying amount, asset, purpose, destination type, and destination details
-- [ ] **PAY-02**: Payment requests work in simulated mode with identical API surface (no real funds moved)
+- [x] **PAY-02**: Payment requests work in simulated mode with identical API surface (no real funds moved)
 - [ ] **PAY-03**: Treasury can pay BOLT11 Lightning invoices via LND on behalf of an agent
 - [ ] **PAY-04**: Treasury can mint, melt, and swap Cashu tokens via self-hosted Nutshell mint on behalf of an agent
 - [ ] **PAY-05**: Treasury auto-routes payments to Lightning or Cashu based on amount, fee, and destination type
@@ -27,11 +27,11 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Policy Engine
 
-- [ ] **PLCY-01**: Policy engine evaluates every payment request before dispatch — no bypass path
-- [ ] **PLCY-02**: Per-agent configurable maximum single transaction amount
-- [ ] **PLCY-03**: Per-agent configurable daily spend limit (resets on 24h window)
-- [ ] **PLCY-04**: Policy engine returns ALLOW, DENY, or REQUIRE_HUMAN_APPROVAL for each request
-- [ ] **PLCY-05**: Policy engine defaults to DENY on any internal error (fail-closed)
+- [x] **PLCY-01**: Policy engine evaluates every payment request before dispatch — no bypass path
+- [x] **PLCY-02**: Per-agent configurable maximum single transaction amount
+- [x] **PLCY-03**: Per-agent configurable daily spend limit (resets on 24h window)
+- [x] **PLCY-04**: Policy engine returns ALLOW, DENY, or REQUIRE_HUMAN_APPROVAL for each request
+- [x] **PLCY-05**: Policy engine defaults to DENY on any internal error (fail-closed)
 - [ ] **PLCY-06**: Over-limit transactions route to pending state with operator notification
 - [ ] **PLCY-07**: Pending approvals time out to DENY after configurable interval
 - [ ] **PLCY-08**: Policy changes are versioned with effective-from timestamps
@@ -39,8 +39,8 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Observability
 
-- [ ] **OBSV-01**: Append-only audit log records every financial action with timestamp, agent_id, action type, parameters, policy decision, and result
-- [ ] **OBSV-02**: Audit log entries are written in the same database transaction as the ledger update they describe
+- [x] **OBSV-01**: Append-only audit log records every financial action with timestamp, agent_id, action type, parameters, policy decision, and result
+- [x] **OBSV-02**: Audit log entries are written in the same database transaction as the ledger update they describe
 - [ ] **OBSV-03**: Audit log is filterable by agent_id, action_type, and time range via API
 - [x] **OBSV-04**: All wallet private keys, LN macaroons, and Cashu mint credentials are stored only in the Treasury Service
 - [ ] **OBSV-05**: Agent bearer tokens and secrets are masked in all log output
@@ -104,23 +104,23 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AGNT-04 | Phase 1 | Pending |
 | AGNT-05 | Phase 1 | Pending |
 | PAY-01 | Phase 1 | Pending |
-| PAY-02 | Phase 1 | Pending |
+| PAY-02 | Phase 1 | Complete |
 | PAY-03 | Phase 2 | Pending |
 | PAY-04 | Phase 3 | Pending |
 | PAY-05 | Phase 3 | Pending |
 | PAY-06 | Phase 2 | Pending |
 | PAY-07 | Phase 4 | Pending |
-| PLCY-01 | Phase 1 | Pending |
-| PLCY-02 | Phase 1 | Pending |
-| PLCY-03 | Phase 1 | Pending |
-| PLCY-04 | Phase 1 | Pending |
-| PLCY-05 | Phase 1 | Pending |
+| PLCY-01 | Phase 1 | Complete |
+| PLCY-02 | Phase 1 | Complete |
+| PLCY-03 | Phase 1 | Complete |
+| PLCY-04 | Phase 1 | Complete |
+| PLCY-05 | Phase 1 | Complete |
 | PLCY-06 | Phase 4 | Pending |
 | PLCY-07 | Phase 4 | Pending |
 | PLCY-08 | Phase 4 | Pending |
 | PLCY-09 | Phase 4 | Pending |
-| OBSV-01 | Phase 1 | Pending |
-| OBSV-02 | Phase 1 | Pending |
+| OBSV-01 | Phase 1 | Complete |
+| OBSV-02 | Phase 1 | Complete |
 | OBSV-03 | Phase 1 | Pending |
 | OBSV-04 | Phase 1 | Complete |
 | OBSV-05 | Phase 1 | Pending |

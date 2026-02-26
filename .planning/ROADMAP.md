@@ -76,7 +76,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 1/5 | In Progress|  |
+| 1. Foundation | 2/5 | In Progress|  |
 | 2. Lightning Backend | 0/TBD | Not started | - |
 | 3. Cashu Backend | 0/TBD | Not started | - |
 | 4. Operator Experience and Advanced Policy | 0/TBD | Not started | - |
