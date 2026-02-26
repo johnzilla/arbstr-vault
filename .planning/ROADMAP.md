@@ -32,7 +32,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 5 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — Project scaffolding, DB schema, config, types, and Fastify app skeleton
+- [x] 01-01-PLAN.md — Project scaffolding, DB schema, config, types, and Fastify app skeleton
 - [ ] 01-02-PLAN.md — Agent management, auth middleware, and agent API routes
 - [ ] 01-03-PLAN.md — Policy engine, ledger module, audit module, and simulated wallet
 - [ ] 01-04-PLAN.md — Payment service orchestration and payment API route
@@ -76,7 +76,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 0/5 | Planned | - |
+| 1. Foundation | 1/5 | In Progress|  |
 | 2. Lightning Backend | 0/TBD | Not started | - |
 | 3. Cashu Backend | 0/TBD | Not started | - |
 | 4. Operator Experience and Advanced Policy | 0/TBD | Not started | - |

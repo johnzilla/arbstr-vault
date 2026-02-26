@@ -10,28 +10,28 @@ See: .planning/PROJECT.md (updated 2026-02-26)
 ## Current Position
 
 Phase: 1 of 4 (Foundation)
-Plan: 0 of TBD in current phase
-Status: Ready to plan
-Last activity: 2026-02-26 — Roadmap created; all 34 v1 requirements mapped across 4 phases
+Plan: 1 of 5 in current phase
+Status: In progress
+Last activity: 2026-02-26 — Completed 01-01: Foundation scaffolding, schema, app skeleton
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [█░░░░░░░░░] 5%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 0
-- Average duration: —
-- Total execution time: 0 hours
+- Total plans completed: 1
+- Average duration: ~3 minutes
+- Total execution time: ~3 minutes
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| - | - | - | - |
+| 01-foundation | 1 | ~3 min | ~3 min |
 
 **Recent Trend:**
-- Last 5 plans: —
-- Trend: —
+- Last 5 plans: 01-01 (3 min)
+- Trend: Baseline established
 
 *Updated after each plan completion*
 
@@ -46,6 +46,10 @@ Recent decisions affecting current work:
 - Self-hosted Cashu mint as hot wallet: control over minting/redeeming, limited balance for security
 - Static token auth for v1: simplicity — only personal agents, no external users
 - HTTP/JSON API (not gRPC): simpler for agent integration, sufficient for internal use
+- Use zod/v4 import path (not 'zod') — confirmed subpath available in zod@4.3.6
+- WAL mode enabled with foreign_keys=ON and synchronous=NORMAL for SQLite performance
+- buildApp() factory pattern separates app construction from server lifecycle
+- Deny-all defaults: policies default to 0 msat limits — agents cannot spend until operator configures
 
 ### Pending Todos
 
@@ -59,5 +63,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Roadmap created — ready to begin Phase 1 planning
+Stopped at: Completed 01-01-PLAN.md — foundation scaffolding complete, ready for 01-02
 Resume file: None

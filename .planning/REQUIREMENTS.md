@@ -42,7 +42,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **OBSV-01**: Append-only audit log records every financial action with timestamp, agent_id, action type, parameters, policy decision, and result
 - [ ] **OBSV-02**: Audit log entries are written in the same database transaction as the ledger update they describe
 - [ ] **OBSV-03**: Audit log is filterable by agent_id, action_type, and time range via API
-- [ ] **OBSV-04**: All wallet private keys, LN macaroons, and Cashu mint credentials are stored only in the Treasury Service
+- [x] **OBSV-04**: All wallet private keys, LN macaroons, and Cashu mint credentials are stored only in the Treasury Service
 - [ ] **OBSV-05**: Agent bearer tokens and secrets are masked in all log output
 - [ ] **OBSV-06**: Per-agent configurable balance alert threshold that notifies operator when balance drops below floor
 - [ ] **OBSV-07**: Operator can view all agents, their balances, recent spend, policy state, and daily utilization via API
@@ -54,7 +54,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **SEC-03**: All agent-supplied strings are validated via strict Zod schemas — no free-text fields affect policy routing
 - [ ] **SEC-04**: Lightning payment state machine tracks payment_hash before send and resolves via TrackPaymentV2 (prevents false refunds)
 - [ ] **SEC-05**: LND macaroon is scoped to invoice+offchain operations only (never admin.macaroon)
-- [ ] **SEC-06**: If Treasury Service is down, agents cannot move money (fail-closed architecture)
+- [x] **SEC-06**: If Treasury Service is down, agents cannot move money (fail-closed architecture)
 
 ## v2 Requirements
 
@@ -122,7 +122,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | OBSV-01 | Phase 1 | Pending |
 | OBSV-02 | Phase 1 | Pending |
 | OBSV-03 | Phase 1 | Pending |
-| OBSV-04 | Phase 1 | Pending |
+| OBSV-04 | Phase 1 | Complete |
 | OBSV-05 | Phase 1 | Pending |
 | OBSV-06 | Phase 4 | Pending |
 | OBSV-07 | Phase 4 | Pending |
@@ -131,7 +131,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SEC-03 | Phase 1 | Pending |
 | SEC-04 | Phase 2 | Pending |
 | SEC-05 | Phase 2 | Pending |
-| SEC-06 | Phase 1 | Pending |
+| SEC-06 | Phase 1 | Complete |
 
 **Coverage:**
 - v1 requirements: 34 total
