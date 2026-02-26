@@ -53,6 +53,10 @@ Recent decisions affecting current work:
 - REQUIRE_HUMAN_APPROVAL type exists in PolicyOutcome now — trigger path deferred to Phase 4
 - BetterSQLite3Database<Record<string, never>> as module Db type — satisfies TablesRelationalConfig for both db and tx
 - ledgerRepo uses drizzle sql tagged template for COALESCE(SUM(...)) — no first-class sum() in drizzle SQLite
+- buildApp(injectedDb?) accepts optional db — routes use app.db decorator for test isolation without module mocking
+- agentAuth uses request.server.db (not direct import) — same testability reason as above
+- vitest.config.ts sets env vars before ESM module graph loads — config.ts evaluates at import time, not runtime
+- Agent scope enforcement: agentAuth hook checks :id param against authenticated agent.id, returns 403 on mismatch
 
 ### Pending Todos
 
@@ -66,5 +70,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Completed 01-03-PLAN.md — policy engine, ledger, audit, simulated wallet complete, ready for 01-04
+Stopped at: Completed 01-02-PLAN.md — agent management API, two-scope auth, 11 integration tests, all green
 Resume file: None
