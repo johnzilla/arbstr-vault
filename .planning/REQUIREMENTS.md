@@ -98,46 +98,46 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AGNT-01 | — | Pending |
-| AGNT-02 | — | Pending |
-| AGNT-03 | — | Pending |
-| AGNT-04 | — | Pending |
-| AGNT-05 | — | Pending |
-| PAY-01 | — | Pending |
-| PAY-02 | — | Pending |
-| PAY-03 | — | Pending |
-| PAY-04 | — | Pending |
-| PAY-05 | — | Pending |
-| PAY-06 | — | Pending |
-| PAY-07 | — | Pending |
-| PLCY-01 | — | Pending |
-| PLCY-02 | — | Pending |
-| PLCY-03 | — | Pending |
-| PLCY-04 | — | Pending |
-| PLCY-05 | — | Pending |
-| PLCY-06 | — | Pending |
-| PLCY-07 | — | Pending |
-| PLCY-08 | — | Pending |
-| PLCY-09 | — | Pending |
-| OBSV-01 | — | Pending |
-| OBSV-02 | — | Pending |
-| OBSV-03 | — | Pending |
-| OBSV-04 | — | Pending |
-| OBSV-05 | — | Pending |
-| OBSV-06 | — | Pending |
-| OBSV-07 | — | Pending |
-| SEC-01 | — | Pending |
-| SEC-02 | — | Pending |
-| SEC-03 | — | Pending |
-| SEC-04 | — | Pending |
-| SEC-05 | — | Pending |
-| SEC-06 | — | Pending |
+| AGNT-01 | Phase 1 | Pending |
+| AGNT-02 | Phase 1 | Pending |
+| AGNT-03 | Phase 1 | Pending |
+| AGNT-04 | Phase 1 | Pending |
+| AGNT-05 | Phase 1 | Pending |
+| PAY-01 | Phase 1 | Pending |
+| PAY-02 | Phase 1 | Pending |
+| PAY-03 | Phase 2 | Pending |
+| PAY-04 | Phase 3 | Pending |
+| PAY-05 | Phase 3 | Pending |
+| PAY-06 | Phase 2 | Pending |
+| PAY-07 | Phase 4 | Pending |
+| PLCY-01 | Phase 1 | Pending |
+| PLCY-02 | Phase 1 | Pending |
+| PLCY-03 | Phase 1 | Pending |
+| PLCY-04 | Phase 1 | Pending |
+| PLCY-05 | Phase 1 | Pending |
+| PLCY-06 | Phase 4 | Pending |
+| PLCY-07 | Phase 4 | Pending |
+| PLCY-08 | Phase 4 | Pending |
+| PLCY-09 | Phase 4 | Pending |
+| OBSV-01 | Phase 1 | Pending |
+| OBSV-02 | Phase 1 | Pending |
+| OBSV-03 | Phase 1 | Pending |
+| OBSV-04 | Phase 1 | Pending |
+| OBSV-05 | Phase 1 | Pending |
+| OBSV-06 | Phase 4 | Pending |
+| OBSV-07 | Phase 4 | Pending |
+| SEC-01 | Phase 1 | Pending |
+| SEC-02 | Phase 1 | Pending |
+| SEC-03 | Phase 1 | Pending |
+| SEC-04 | Phase 2 | Pending |
+| SEC-05 | Phase 2 | Pending |
+| SEC-06 | Phase 1 | Pending |
 
 **Coverage:**
-- v1 requirements: 33 total
-- Mapped to phases: 0
-- Unmapped: 33
+- v1 requirements: 34 total
+- Mapped to phases: 34
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-26*
-*Last updated: 2026-02-26 after initial definition*
+*Last updated: 2026-02-26 after roadmap creation*

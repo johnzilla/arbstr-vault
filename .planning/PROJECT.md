@@ -65,6 +65,8 @@ Agents can request and execute payments within explicit policy limits, with all 
 | Self-hosted Cashu mint as hot wallet | Control over minting/redeeming, limited balance for security | — Pending |
 | Static token auth for v1 | Simplicity — only personal agents, no external users | — Pending |
 | HTTP/JSON API (not gRPC) | Simpler for agent integration, sufficient for internal use | — Pending |
+| TypeScript MVP, Rust later | Ship fast with best library support (lightning npm, cashu-ts); rewrite in Rust if design proves valuable | — Pending |
+| No Python in treasury service | Python only acceptable in containerized sidecars (Nutshell mint); treasury code is TypeScript | — Pending |
 
 ---
-*Last updated: 2026-02-26 after initialization*
+*Last updated: 2026-02-26 after roadmap creation*
