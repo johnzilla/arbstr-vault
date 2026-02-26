@@ -46,7 +46,12 @@ Plans:
   1. Agent can submit a BOLT11 payment request and the Treasury pays the invoice via LND; the payment response includes the payment_hash as a transaction reference
   2. If LND returns a network timeout or ambiguous status, the payment stays PENDING in the ledger until resolved via TrackPaymentV2 — no automatic refund on transient failure
   3. The LND macaroon used by the Treasury is scoped to invoice and offchain operations only; the admin macaroon is never referenced in Treasury code or configuration
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 02-01-PLAN.md — Schema extension (payment_hash, max_fee_msat, RESERVE/RELEASE), config, LND client with macaroon verification
+- [ ] 02-02-PLAN.md — LightningWallet class, payment service RESERVE/RELEASE refactor, startup wiring with crash recovery
+- [ ] 02-03-PLAN.md — Payment status endpoint, Docker dev environment, and Lightning integration tests
 
 ### Phase 3: Cashu Backend
 **Goal**: Agents can execute payments via the self-hosted Cashu hot wallet as a second rail, and the Treasury automatically routes payments between Lightning and Cashu based on amount and destination type
@@ -77,6 +82,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation | 5/5 | Complete | 2026-02-26 |
-| 2. Lightning Backend | 0/TBD | Not started | - |
+| 2. Lightning Backend | 0/3 | In progress | - |
 | 3. Cashu Backend | 0/TBD | Not started | - |
 | 4. Operator Experience and Advanced Policy | 0/TBD | Not started | - |
