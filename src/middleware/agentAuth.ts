@@ -1,7 +1,6 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import { agentsRepo } from '../modules/agents/agents.repo.js';
 import { hashToken } from '../modules/tokens/tokens.service.js';
-import { db } from '../db/client.js';
 import type { agents } from '../db/schema.js';
 
 // Augment FastifyRequest with agent identity fields
@@ -15,6 +14,7 @@ declare module 'fastify' {
 /**
  * Fastify onRequest hook for agent authentication.
  * Validates vtk_ Bearer token, injects agent identity, and enforces agent-owns-resource scope.
+ * Uses app.db decorator (injected by buildApp) so tests can inject an in-memory db.
  */
 export async function agentAuth(request: FastifyRequest, reply: FastifyReply): Promise<void> {
   const authHeader = request.headers.authorization;
@@ -34,7 +34,8 @@ export async function agentAuth(request: FastifyRequest, reply: FastifyReply): P
     });
   }
 
-  // Hash and look up agent
+  // Hash and look up agent using the app-level db decorator
+  const db = request.server.db;
   const tokenHash = hashToken(provided);
   const agent = agentsRepo.findByTokenHash(db, tokenHash);
 
