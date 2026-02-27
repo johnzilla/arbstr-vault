@@ -22,7 +22,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **PAY-03**: Treasury can pay BOLT11 Lightning invoices via LND on behalf of an agent
 - [ ] **PAY-04**: Treasury can mint, melt, and swap Cashu tokens via self-hosted Nutshell mint on behalf of an agent
 - [ ] **PAY-05**: Treasury auto-routes payments to Lightning or Cashu based on amount, fee, and destination type
-- [ ] **PAY-06**: Payment responses include transaction reference (invoice paid, payment_hash, token ID)
+- [x] **PAY-06**: Payment responses include transaction reference (invoice paid, payment_hash, token ID)
 - [ ] **PAY-07**: Agent can propose a withdrawal to a master wallet or external address
 
 ### Policy Engine
@@ -108,7 +108,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PAY-03 | Phase 2 | Complete |
 | PAY-04 | Phase 3 | Pending |
 | PAY-05 | Phase 3 | Pending |
-| PAY-06 | Phase 2 | Pending |
+| PAY-06 | Phase 2 | Complete |
 | PAY-07 | Phase 4 | Pending |
 | PLCY-01 | Phase 1 | Complete |
 | PLCY-02 | Phase 1 | Complete |
