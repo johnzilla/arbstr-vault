@@ -10,23 +10,45 @@ import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type * as schema from './db/schema.js';
 import { db as defaultDb } from './db/client.js';
 import { loggerConfig } from './plugins/pino.plugin.js';
+import { createPaymentsService } from './modules/payments/payments.service.js';
+import { simulatedWallet } from './modules/payments/wallet/simulated.wallet.js';
+import type { WalletBackend } from './modules/payments/wallet/wallet.interface.js';
 
 type DB = BetterSQLite3Database<typeof schema>;
+
+// Type for the paymentsService instance stored on the app decorator
+type PaymentsService = ReturnType<typeof createPaymentsService>;
 
 export interface BuildAppOptions {
   /** Optional injected database — used in tests for in-memory isolation */
   db?: DB;
   /** Optional pino destination stream — used in tests to capture log output */
   loggerStream?: DestinationStream;
+  /** Optional wallet backend — defaults to simulatedWallet if not provided */
+  wallet?: WalletBackend;
+}
+
+declare module 'fastify' {
+  interface FastifyInstance {
+    db: DB;
+    paymentsService: PaymentsService;
+  }
 }
 
 /**
  * Build the Fastify application.
  *
  * Accepts either:
- * - No arguments: uses default DB and default logger
+ * - No arguments: uses default DB and default logger and simulated wallet
  * - A DB directly (legacy): buildApp(db)
- * - An options object: buildApp({ db, loggerStream })
+ * - An options object: buildApp({ db, loggerStream, wallet })
+ *
+ * The wallet backend is stored as a Fastify decorator (app.paymentsService).
+ * Routes read from app.paymentsService rather than importing paymentsService directly.
+ * This enables wallet injection for both production (Lightning) and tests (simulated).
+ *
+ * IMPORTANT: Do NOT connect to LND inside buildApp — call initializeLightningBackend
+ * before buildApp and pass the resulting wallet in options.wallet.
  */
 export function buildApp(injectedDb?: DB, options?: BuildAppOptions): ReturnType<typeof Fastify>;
 export function buildApp(options?: BuildAppOptions): ReturnType<typeof Fastify>;
@@ -36,23 +58,27 @@ export function buildApp(
 ): ReturnType<typeof Fastify> {
   let db: DB | undefined;
   let loggerStream: DestinationStream | undefined;
+  let wallet: WalletBackend | undefined;
 
   if (injectedDbOrOptions == null) {
     // buildApp() — no args
     db = undefined;
     loggerStream = options?.loggerStream;
+    wallet = options?.wallet;
   } else if (
     typeof injectedDbOrOptions === 'object' &&
-    ('db' in injectedDbOrOptions || 'loggerStream' in injectedDbOrOptions)
+    ('db' in injectedDbOrOptions || 'loggerStream' in injectedDbOrOptions || 'wallet' in injectedDbOrOptions)
   ) {
-    // buildApp({ db?, loggerStream? }) — options object
+    // buildApp({ db?, loggerStream?, wallet? }) — options object
     const opts = injectedDbOrOptions as BuildAppOptions;
     db = opts.db;
     loggerStream = opts.loggerStream;
+    wallet = opts.wallet;
   } else {
     // buildApp(db) — legacy: first arg is a DB instance
     db = injectedDbOrOptions as DB;
     loggerStream = options?.loggerStream;
+    wallet = options?.wallet;
   }
 
   const app = Fastify({
@@ -64,6 +90,10 @@ export function buildApp(
 
   // Register db as a decorator so routes and middleware can access it
   app.decorate('db', db ?? defaultDb);
+
+  // Register paymentsService as a decorator bound to the selected wallet backend
+  // Routes use app.paymentsService instead of importing paymentsService directly
+  app.decorate('paymentsService', createPaymentsService(wallet ?? simulatedWallet));
 
   // Health check
   app.get('/health', async (_request, _reply) => {

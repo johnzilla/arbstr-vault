@@ -94,6 +94,21 @@ export const ledgerRepo = {
   },
 
   /**
+   * Update the payment_hash on an existing ledger entry.
+   * Used to record the payment_hash on a RESERVE entry after the 'paying' event fires.
+   *
+   * @param db - Database connection
+   * @param entryId - The ledger entry ID (same as txId for RESERVE entries)
+   * @param paymentHash - LND payment hash hex string from 'paying' event
+   */
+  updatePaymentHash(db: Db, entryId: string, paymentHash: string): void {
+    db.update(ledgerEntries)
+      .set({ payment_hash: paymentHash })
+      .where(eq(ledgerEntries.id, entryId))
+      .run();
+  },
+
+  /**
    * Return all pending Lightning payments for crash recovery.
    * Returns RESERVE entries with mode='lightning' that have no corresponding
    * RELEASE or PAYMENT entry with the same ref_id.

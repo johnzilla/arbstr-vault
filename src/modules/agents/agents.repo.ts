@@ -15,6 +15,7 @@ export interface AgentWithPolicy {
     id: string;
     max_transaction_msat: number;
     daily_limit_msat: number;
+    max_fee_msat: number | null;
     created_at: Date;
     updated_at: Date;
   } | null;
@@ -105,6 +106,7 @@ export const agentsRepo = {
             id: policy.id,
             max_transaction_msat: policy.max_transaction_msat,
             daily_limit_msat: policy.daily_limit_msat,
+            max_fee_msat: policy.max_fee_msat ?? null,
             created_at: policy.created_at,
             updated_at: policy.updated_at,
           }

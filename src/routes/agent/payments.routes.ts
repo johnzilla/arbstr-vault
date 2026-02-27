@@ -2,7 +2,6 @@ import type { FastifyPluginAsync } from 'fastify';
 import { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { z } from 'zod/v4';
 import { agentAuth } from '../../middleware/agentAuth.js';
-import { paymentsService } from '../../modules/payments/payments.service.js';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type * as schema from '../../db/schema.js';
 
@@ -34,8 +33,10 @@ export const agentPaymentRoutes: FastifyPluginAsync = async (fastify) => {
             transaction_id: z.string(),
             policy_decision: z.enum(['ALLOW', 'DENY', 'REQUIRE_HUMAN_APPROVAL']),
             reason: z.string().optional(),
-            mode: z.literal('simulated'),
+            mode: z.string(),
             status: z.enum(['SETTLED', 'PENDING', 'FAILED']),
+            payment_hash: z.string().optional(),
+            fee_msat: z.number().optional(),
           }),
         },
       },
@@ -47,14 +48,18 @@ export const agentPaymentRoutes: FastifyPluginAsync = async (fastify) => {
 
       // Process payment — always returns 200 regardless of policy decision.
       // HTTP status reflects request processing success; policy_decision reflects outcome.
-      const result = await paymentsService.processPayment(db, id, body);
+      // Use app.paymentsService (bound to the wallet configured at startup)
+      // rather than a hardcoded import, so the Lightning wallet is used in production.
+      const result = await app.paymentsService.processPayment(db, id, body);
 
       return reply.send({
         transaction_id: result.transaction_id,
         policy_decision: result.policy_decision,
         reason: result.reason,
-        mode: 'simulated' as const,
+        mode: result.mode,
         status: result.status,
+        payment_hash: result.payment_hash,
+        fee_msat: result.fee_msat,
       });
     },
   );
