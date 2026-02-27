@@ -6,6 +6,7 @@ import { adminDepositRoutes } from './routes/admin/deposit.routes.js';
 import { agentBalanceRoutes } from './routes/agent/balance.routes.js';
 import { agentHistoryRoutes } from './routes/agent/history.routes.js';
 import { agentPaymentRoutes } from './routes/agent/payments.routes.js';
+import { agentPaymentStatusRoutes } from './routes/agent/payment-status.routes.js';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type * as schema from './db/schema.js';
 import { db as defaultDb } from './db/client.js';
@@ -108,6 +109,7 @@ export function buildApp(
   app.register(agentBalanceRoutes);
   app.register(agentHistoryRoutes);
   app.register(agentPaymentRoutes);
+  app.register(agentPaymentStatusRoutes);
 
   return app;
 }

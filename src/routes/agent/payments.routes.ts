@@ -23,7 +23,7 @@ export const agentPaymentRoutes: FastifyPluginAsync = async (fastify) => {
         }),
         body: z.object({
           amount_msat: z.number().int().positive(),
-          asset: z.enum(['BTC_simulated']),
+          asset: z.enum(['BTC_simulated', 'BTC_lightning']),
           purpose: z.string().min(1).max(200),
           destination_type: z.enum(['lightning_invoice', 'cashu_token', 'internal']),
           destination: z.string().min(1).max(2000),
