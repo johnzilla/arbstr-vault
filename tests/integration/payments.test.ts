@@ -381,4 +381,49 @@ describe('Payment API — end-to-end integration tests', () => {
     const emptyBody = JSON.parse(emptyRes.body);
     expect(emptyBody.entries.length).toBe(0);
   });
+
+  // ------------------------------------------------------------------
+  // m. Payment status endpoint — GET /agents/:id/payments/:tx_id
+  // ------------------------------------------------------------------
+
+  it('m. payment status — simulated SETTLED payment returns SETTLED status', async () => {
+    const { agent_id, token } = await registerAgent(app, 'Status Agent');
+    await deposit(app, agent_id, 100_000);
+    await setPolicy(app, agent_id, 50_000, 200_000);
+
+    // Make a successful payment
+    const payRes = await pay(app, agent_id, token, 10_000);
+    expect(payRes.statusCode).toBe(200);
+    const payBody = JSON.parse(payRes.body);
+    expect(payBody.status).toBe('SETTLED');
+    const txId = payBody.transaction_id;
+
+    // Poll the payment status endpoint
+    const statusRes = await app.inject({
+      method: 'GET',
+      url: `/agents/${agent_id}/payments/${txId}`,
+      headers: { authorization: `Bearer ${token}` },
+    });
+    expect(statusRes.statusCode).toBe(200);
+    const statusBody = JSON.parse(statusRes.body);
+
+    expect(statusBody.transaction_id).toBe(txId);
+    expect(statusBody.status).toBe('SETTLED');
+    expect(statusBody.mode).toBe('simulated');
+    expect(statusBody.amount_msat).toBe(10_000);
+    expect(statusBody.created_at).toBeDefined();
+  });
+
+  it('n. payment status — unknown tx_id returns 404', async () => {
+    const { agent_id, token } = await registerAgent(app, 'NotFound Agent');
+
+    const statusRes = await app.inject({
+      method: 'GET',
+      url: `/agents/${agent_id}/payments/tx_01UNKNOWNTXID`,
+      headers: { authorization: `Bearer ${token}` },
+    });
+    expect(statusRes.statusCode).toBe(404);
+    const body = JSON.parse(statusRes.body);
+    expect(body.error.code).toBe('not_found');
+  });
 });

@@ -1,0 +1,164 @@
+# Treasury Service — Regtest Development Environment
+#
+# Provides a self-contained Bitcoin regtest + Lightning Network for local testing
+# without requiring Polar GUI. Contains three services:
+#   - bitcoind: Bitcoin Core in regtest mode (block producer)
+#   - lnd-alice: Treasury's LND node (our wallet)
+#   - lnd-bob: Test payee node (receives payments from Alice)
+#
+# Usage:
+#   Start:    docker compose -f docker-compose.dev.yml up -d
+#   Stop:     docker compose -f docker-compose.dev.yml down
+#   Logs:     docker compose -f docker-compose.dev.yml logs -f lnd-alice
+#   Reset:    docker compose -f docker-compose.dev.yml down -v  # removes volumes
+#
+# After starting, set environment variables for Treasury to connect to lnd-alice:
+#   export WALLET_BACKEND=lightning
+#   export LND_HOST=127.0.0.1
+#   export LND_PORT=10009
+#   export LND_CERT_BASE64=$(cat ./lnd-shared/alice/tls.cert | base64 -w 0)
+#   export LND_MACAROON_BASE64=$(cat ./lnd-shared/alice/treasury.macaroon | base64 -w 0)
+#
+# Manual regtest setup (after nodes start):
+#   1. Get Alice's address: docker exec lnd-alice lncli --network=regtest newaddress p2wkh
+#   2. Mine some blocks:    docker exec bitcoind bitcoin-cli -regtest -rpcuser=rpcuser -rpcpassword=rpcpass generatetoaddress 101 <alice_address>
+#   3. Get Bob's pubkey:    docker exec lnd-bob lncli --network=regtest getinfo | jq .identity_pubkey
+#   4. Connect Alice->Bob:  docker exec lnd-alice lncli --network=regtest connect <bob_pubkey>@lnd-bob:9735
+#   5. Open channel:        docker exec lnd-alice lncli --network=regtest openchannel <bob_pubkey> 1000000
+#   6. Mine confirmations:  docker exec bitcoind bitcoin-cli -regtest -rpcuser=rpcuser -rpcpassword=rpcpass generatetoaddress 6 <alice_address>
+#   7. Get Bob invoice:     docker exec lnd-bob lncli --network=regtest addinvoice --amt_msat 10000
+#   8. Pay from Alice:      POST /agents/:id/pay with destination=<invoice>
+
+version: '3.8'
+
+volumes:
+  bitcoind-data:
+  lnd-alice-data:
+  lnd-bob-data:
+  # Shared volume for TLS certs and baked macaroons — mounted by both LND nodes and the host
+  lnd-shared:
+
+services:
+  # ---------------------------------------------------------------------------
+  # Bitcoin Core — regtest mode
+  # ---------------------------------------------------------------------------
+  bitcoind:
+    image: polarlightning/bitcoind:27.0
+    container_name: bitcoind
+    restart: unless-stopped
+    volumes:
+      - bitcoind-data:/home/bitcoin/.bitcoin
+    ports:
+      - "18443:18443"  # RPC
+      - "19735:19735"  # ZMQ (optional)
+    environment:
+      BITCOIN_DATA: /home/bitcoin/.bitcoin
+    command: >
+      bitcoind
+        -regtest
+        -server
+        -rpcbind=0.0.0.0
+        -rpcallowip=0.0.0.0/0
+        -rpcuser=rpcuser
+        -rpcpassword=rpcpass
+        -rpcport=18443
+        -fallbackfee=0.0002
+        -zmqpubrawblock=tcp://0.0.0.0:28334
+        -zmqpubrawtx=tcp://0.0.0.0:28335
+        -txindex=1
+        -dnsseed=0
+        -upnp=0
+        -deprecatedrpc=warnings
+
+  # ---------------------------------------------------------------------------
+  # LND Alice — Treasury's node
+  # ---------------------------------------------------------------------------
+  lnd-alice:
+    image: lightninglabs/lnd:v0.18.5-beta
+    container_name: lnd-alice
+    restart: unless-stopped
+    depends_on:
+      - bitcoind
+    volumes:
+      - lnd-alice-data:/root/.lnd
+      - lnd-shared:/shared
+    ports:
+      - "10009:10009"  # gRPC (Treasury connects here)
+      - "8080:8080"    # REST
+      - "9735:9735"    # P2P Lightning
+    environment:
+      HOME: /root
+    # Entrypoint: start LND, wait for it to be ready, then bake the scoped macaroon
+    # Scoped macaroon: info:read invoices:read invoices:write offchain:read offchain:write
+    # Note: getChainBalance (used by verifyMacaroonScope) requires onchain:read which is
+    #       intentionally excluded — this ensures Treasury startup rejects overprivileged macaroons
+    entrypoint: /bin/sh
+    command: >
+      -c "lnd
+        --bitcoin.active
+        --bitcoin.regtest
+        --bitcoin.node=bitcoind
+        --bitcoind.rpchost=bitcoind:18443
+        --bitcoind.rpcuser=rpcuser
+        --bitcoind.rpcpass=rpcpass
+        --bitcoind.zmqpubrawblock=tcp://bitcoind:28334
+        --bitcoind.zmqpubrawtx=tcp://bitcoind:28335
+        --rpclisten=0.0.0.0:10009
+        --restlisten=0.0.0.0:8080
+        --listen=0.0.0.0:9735
+        --tlsextradomain=lnd-alice
+        --tlsextraip=0.0.0.0
+        --alias=alice
+        --color=#ff9900
+        --noseedbackup &
+      LND_PID=$$!;
+      echo 'Waiting for lnd-alice to start...';
+      until lncli --network=regtest getinfo > /dev/null 2>&1; do sleep 2; done;
+      echo 'lnd-alice ready. Baking scoped macaroon...';
+      lncli --network=regtest bakemacaroon
+        info:read
+        invoices:read
+        invoices:write
+        offchain:read
+        offchain:write
+        --save_to=/shared/alice/treasury.macaroon;
+      echo 'Macaroon baked at /shared/alice/treasury.macaroon';
+      cp /root/.lnd/tls.cert /shared/alice/tls.cert;
+      echo 'TLS cert copied to /shared/alice/tls.cert';
+      wait $$LND_PID"
+
+  # ---------------------------------------------------------------------------
+  # LND Bob — Test payee node
+  # ---------------------------------------------------------------------------
+  lnd-bob:
+    image: lightninglabs/lnd:v0.18.5-beta
+    container_name: lnd-bob
+    restart: unless-stopped
+    depends_on:
+      - bitcoind
+    volumes:
+      - lnd-bob-data:/root/.lnd
+      - lnd-shared:/shared
+    ports:
+      - "10010:10009"  # gRPC (offset by 1 to avoid conflict with Alice)
+      - "8081:8080"    # REST
+      - "9736:9735"    # P2P Lightning
+    environment:
+      HOME: /root
+    command: >
+      --bitcoin.active
+      --bitcoin.regtest
+      --bitcoin.node=bitcoind
+      --bitcoind.rpchost=bitcoind:18443
+      --bitcoind.rpcuser=rpcuser
+      --bitcoind.rpcpass=rpcpass
+      --bitcoind.zmqpubrawblock=tcp://bitcoind:28334
+      --bitcoind.zmqpubrawtx=tcp://bitcoind:28335
+      --rpclisten=0.0.0.0:10009
+      --restlisten=0.0.0.0:8080
+      --listen=0.0.0.0:9735
+      --tlsextradomain=lnd-bob
+      --tlsextraip=0.0.0.0
+      --alias=bob
+      --color=#0099ff
+      --noseedbackup
