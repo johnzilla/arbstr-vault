@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-02-27T01:22:00Z"
+last_updated: "2026-02-27T01:29:10Z"
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 8
-  completed_plans: 6
+  completed_plans: 7
 ---
 
 # Project State
@@ -23,11 +23,11 @@ See: .planning/PROJECT.md (updated 2026-02-26)
 ## Current Position
 
 Phase: 2 of 4 (Lightning Backend) — IN PROGRESS
-Plan: 1 of 3 in current phase — COMPLETE
-Status: Phase 2 Wave 1 started — 02-01 complete, 02-02 next
-Last activity: 2026-02-27 — Completed 02-01: Schema, config, LND client foundation
+Plan: 2 of 3 in current phase — COMPLETE
+Status: Phase 2 Wave 2 done — 02-01 + 02-02 complete, 02-03 next
+Last activity: 2026-02-27 — Completed 02-02: LightningWallet, RESERVE/RELEASE flow, crash recovery
 
-Progress: [███████░░░] ~37%
+Progress: [████████░░] ~43%
 
 ## Performance Metrics
 
@@ -41,10 +41,10 @@ Progress: [███████░░░] ~37%
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-foundation | 5 | ~21 min | ~4.2 min |
-| 02-lightning-backend | 1 | ~3 min | ~3 min |
+| 02-lightning-backend | 2 | ~8 min | ~4 min |
 
 **Recent Trend:**
-- Last 6 plans: 01-01 (3 min), 01-02 (4 min), 01-03 (4 min), 01-04 (4 min), 01-05 (6 min), 02-01 (3 min)
+- Last 6 plans: 01-02 (4 min), 01-03 (4 min), 01-04 (4 min), 01-05 (6 min), 02-01 (3 min), 02-02 (5 min)
 - Trend: Stable at ~3-4 min/plan
 
 *Updated after each plan completion*
@@ -81,6 +81,12 @@ Recent decisions affecting current work:
 - verifyMacaroonScope (SEC-05): attempt getChainBalance at startup; success = overprivileged macaroon = process.exit(1)
 - getPendingLightningPayments uses SQL NOT IN subquery to find RESERVE entries without RELEASE/PAYMENT counterparts
 - Drizzle insert() requires explicit cast for narrow enum types: `as 'simulated' | 'lightning'`
+- LightningStreamError rejects Promise but does NOT trigger RELEASE — stream errors keep ledger PENDING
+- payment_hash stored synchronously in closure variable in 'paying' handler — prevents race condition in regtest
+- createPaymentsService(wallet) factory enables wallet injection without module mocking; backward-compat singleton exported
+- app.paymentsService Fastify decorator — routes use decorator, not direct import, for wallet decoupling
+- initializeLightningBackend dynamically imported in index.ts — avoids loading lightning npm when WALLET_BACKEND=simulated
+- Fee debit is a separate PAYMENT ledger entry on SETTLED — cleaner balance math and audit trail
 
 ### Pending Todos
 
@@ -94,6 +100,6 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Completed 02-01-PLAN.md — schema/config/LND client foundation complete. Wave 1 done. Wave 2 (02-02 LightningWallet) next.
-Resume file: .planning/phases/02-lightning-backend/02-02-PLAN.md
+Stopped at: Completed 02-02-PLAN.md — LightningWallet + RESERVE/RELEASE flow + crash recovery wired. Wave 2 done. Wave 3 (02-03 integration tests + Docker) next.
+Resume file: .planning/phases/02-lightning-backend/02-03-PLAN.md
 Resume command: /gsd:execute-phase 2

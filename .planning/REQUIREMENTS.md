@@ -19,7 +19,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [x] **PAY-01**: Agent can submit a payment request specifying amount, asset, purpose, destination type, and destination details
 - [x] **PAY-02**: Payment requests work in simulated mode with identical API surface (no real funds moved)
-- [ ] **PAY-03**: Treasury can pay BOLT11 Lightning invoices via LND on behalf of an agent
+- [x] **PAY-03**: Treasury can pay BOLT11 Lightning invoices via LND on behalf of an agent
 - [ ] **PAY-04**: Treasury can mint, melt, and swap Cashu tokens via self-hosted Nutshell mint on behalf of an agent
 - [ ] **PAY-05**: Treasury auto-routes payments to Lightning or Cashu based on amount, fee, and destination type
 - [ ] **PAY-06**: Payment responses include transaction reference (invoice paid, payment_hash, token ID)
@@ -52,7 +52,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **SEC-01**: Agents authenticate via static bearer tokens — no direct access to wallet keys
 - [x] **SEC-02**: Policy enforcement and ledger debit happen inside a single atomic database transaction (prevents TOCTOU race conditions)
 - [x] **SEC-03**: All agent-supplied strings are validated via strict Zod schemas — no free-text fields affect policy routing
-- [ ] **SEC-04**: Lightning payment state machine tracks payment_hash before send and resolves via TrackPaymentV2 (prevents false refunds)
+- [x] **SEC-04**: Lightning payment state machine tracks payment_hash before send and resolves via TrackPaymentV2 (prevents false refunds)
 - [x] **SEC-05**: LND macaroon is scoped to invoice+offchain operations only (never admin.macaroon)
 - [x] **SEC-06**: If Treasury Service is down, agents cannot move money (fail-closed architecture)
 
@@ -105,7 +105,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AGNT-05 | Phase 1 | Complete |
 | PAY-01 | Phase 1 | Pending |
 | PAY-02 | Phase 1 | Complete |
-| PAY-03 | Phase 2 | Pending |
+| PAY-03 | Phase 2 | Complete |
 | PAY-04 | Phase 3 | Pending |
 | PAY-05 | Phase 3 | Pending |
 | PAY-06 | Phase 2 | Pending |
@@ -129,7 +129,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SEC-01 | Phase 1 | Complete |
 | SEC-02 | Phase 1 | Pending |
 | SEC-03 | Phase 1 | Complete |
-| SEC-04 | Phase 2 | Pending |
+| SEC-04 | Phase 2 | Complete |
 | SEC-05 | Phase 2 | Complete |
 | SEC-06 | Phase 1 | Complete |
 
