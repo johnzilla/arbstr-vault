@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-02-27T01:29:10Z"
+last_updated: "2026-02-27T01:38:07.206Z"
 progress:
-  total_phases: 4
-  completed_phases: 1
+  total_phases: 2
+  completed_phases: 2
   total_plans: 8
-  completed_plans: 7
+  completed_plans: 8
 ---
 
 # Project State
@@ -22,12 +22,12 @@ See: .planning/PROJECT.md (updated 2026-02-26)
 
 ## Current Position
 
-Phase: 2 of 4 (Lightning Backend) — IN PROGRESS
-Plan: 2 of 3 in current phase — COMPLETE
-Status: Phase 2 Wave 2 done — 02-01 + 02-02 complete, 02-03 next
-Last activity: 2026-02-27 — Completed 02-02: LightningWallet, RESERVE/RELEASE flow, crash recovery
+Phase: 2 of 4 (Lightning Backend) — COMPLETE
+Plan: 3 of 3 in current phase — COMPLETE
+Status: Phase 2 complete — 02-01 + 02-02 + 02-03 all done. Phase 3 (Cashu) next.
+Last activity: 2026-02-27 — Completed 02-03: Payment status endpoint + Lightning tests + Docker dev environment
 
-Progress: [████████░░] ~43%
+Progress: [█████████░] ~57%
 
 ## Performance Metrics
 
@@ -41,11 +41,11 @@ Progress: [████████░░] ~43%
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-foundation | 5 | ~21 min | ~4.2 min |
-| 02-lightning-backend | 2 | ~8 min | ~4 min |
+| 02-lightning-backend | 3 | ~13 min | ~4.3 min |
 
 **Recent Trend:**
-- Last 6 plans: 01-02 (4 min), 01-03 (4 min), 01-04 (4 min), 01-05 (6 min), 02-01 (3 min), 02-02 (5 min)
-- Trend: Stable at ~3-4 min/plan
+- Last 7 plans: 01-03 (4 min), 01-04 (4 min), 01-05 (6 min), 02-01 (3 min), 02-02 (5 min), 02-03 (5 min)
+- Trend: Stable at ~4-5 min/plan
 
 *Updated after each plan completion*
 
@@ -87,6 +87,9 @@ Recent decisions affecting current work:
 - app.paymentsService Fastify decorator — routes use decorator, not direct import, for wallet decoupling
 - initializeLightningBackend dynamically imported in index.ts — avoids loading lightning npm when WALLET_BACKEND=simulated
 - Fee debit is a separate PAYMENT ledger entry on SETTLED — cleaner balance math and audit trail
+- [Phase 02-lightning-backend]: Audit log is authoritative for payment status (PAYMENT_SETTLED/PAYMENT_FAILED actions); ledger entry types are fallback
+- [Phase 02-lightning-backend]: verifyMacaroonScope throws FATAL Error; connectWithRetry catches it and calls process.exit(1)
+- [Phase 02-lightning-backend]: Mock Lightning tests use vi.mock('lightning') hoisted before module graph — no live LND needed for CI
 
 ### Pending Todos
 
@@ -100,6 +103,6 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Completed 02-02-PLAN.md — LightningWallet + RESERVE/RELEASE flow + crash recovery wired. Wave 2 done. Wave 3 (02-03 integration tests + Docker) next.
-Resume file: .planning/phases/02-lightning-backend/02-03-PLAN.md
-Resume command: /gsd:execute-phase 2
+Stopped at: Completed 02-03-PLAN.md — Payment status endpoint + Lightning integration tests + Docker dev environment. Phase 2 complete.
+Resume file: .planning/phases/03-cashu-wallet/ (Phase 3 planning needed)
+Resume command: /gsd:execute-phase 3
