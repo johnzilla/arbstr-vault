@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-02-26T14:53:13.440Z"
+last_updated: "2026-02-27T01:22:00Z"
 progress:
-  total_phases: 1
+  total_phases: 4
   completed_phases: 1
-  total_plans: 5
-  completed_plans: 5
+  total_plans: 8
+  completed_plans: 6
 ---
 
 # Project State
@@ -22,12 +22,12 @@ See: .planning/PROJECT.md (updated 2026-02-26)
 
 ## Current Position
 
-Phase: 1 of 4 (Foundation) — COMPLETE
-Plan: 5 of 5 in current phase — COMPLETE
-Status: Phase 1 complete — ready for Phase 2
-Last activity: 2026-02-26 — Completed 01-05: Pino token redaction, security/isolation tests, full E2E lifecycle test, 59 total tests
+Phase: 2 of 4 (Lightning Backend) — IN PROGRESS
+Plan: 1 of 3 in current phase — COMPLETE
+Status: Phase 2 Wave 1 started — 02-01 complete, 02-02 next
+Last activity: 2026-02-27 — Completed 02-01: Schema, config, LND client foundation
 
-Progress: [██████░░░░] 25%
+Progress: [███████░░░] ~37%
 
 ## Performance Metrics
 
@@ -41,10 +41,11 @@ Progress: [██████░░░░] 25%
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-foundation | 5 | ~21 min | ~4.2 min |
+| 02-lightning-backend | 1 | ~3 min | ~3 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (3 min), 01-02 (4 min), 01-03 (4 min), 01-04 (4 min), 01-05 (6 min)
-- Trend: Stable at ~4 min/plan
+- Last 6 plans: 01-01 (3 min), 01-02 (4 min), 01-03 (4 min), 01-04 (4 min), 01-05 (6 min), 02-01 (3 min)
+- Trend: Stable at ~3-4 min/plan
 
 *Updated after each plan completion*
 
@@ -76,6 +77,10 @@ Recent decisions affecting current work:
 - Pino top-level redact paths: `*.token` wildcard only matches nested fields — explicit `token`, `token_hash`, `raw_token` paths also required for top-level redaction
 - buildApp overloaded to accept BuildAppOptions {db?, loggerStream?} — loggerStream enables test capture of pino output
 - Fail-closed test via paymentsService.processPayment(closedDb) — service layer boundary more reliable than HTTP when agentAuth also uses DB
+- ESM named imports from lightning 11.x work directly in type:module project — no createRequire wrapper needed
+- verifyMacaroonScope (SEC-05): attempt getChainBalance at startup; success = overprivileged macaroon = process.exit(1)
+- getPendingLightningPayments uses SQL NOT IN subquery to find RESERVE entries without RELEASE/PAYMENT counterparts
+- Drizzle insert() requires explicit cast for narrow enum types: `as 'simulated' | 'lightning'`
 
 ### Pending Todos
 
@@ -88,7 +93,7 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-26
-Stopped at: Phase 2 execution ready — 3 plans created (02-01, 02-02, 02-03) in 3 sequential waves, research + planning + verification complete. Wave 1 not yet started.
-Resume file: .planning/phases/02-lightning-backend/02-01-PLAN.md
+Last session: 2026-02-27
+Stopped at: Completed 02-01-PLAN.md — schema/config/LND client foundation complete. Wave 1 done. Wave 2 (02-02 LightningWallet) next.
+Resume file: .planning/phases/02-lightning-backend/02-02-PLAN.md
 Resume command: /gsd:execute-phase 2

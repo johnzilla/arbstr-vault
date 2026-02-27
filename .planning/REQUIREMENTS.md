@@ -53,7 +53,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **SEC-02**: Policy enforcement and ledger debit happen inside a single atomic database transaction (prevents TOCTOU race conditions)
 - [x] **SEC-03**: All agent-supplied strings are validated via strict Zod schemas — no free-text fields affect policy routing
 - [ ] **SEC-04**: Lightning payment state machine tracks payment_hash before send and resolves via TrackPaymentV2 (prevents false refunds)
-- [ ] **SEC-05**: LND macaroon is scoped to invoice+offchain operations only (never admin.macaroon)
+- [x] **SEC-05**: LND macaroon is scoped to invoice+offchain operations only (never admin.macaroon)
 - [x] **SEC-06**: If Treasury Service is down, agents cannot move money (fail-closed architecture)
 
 ## v2 Requirements
@@ -130,7 +130,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SEC-02 | Phase 1 | Pending |
 | SEC-03 | Phase 1 | Complete |
 | SEC-04 | Phase 2 | Pending |
-| SEC-05 | Phase 2 | Pending |
+| SEC-05 | Phase 2 | Complete |
 | SEC-06 | Phase 1 | Complete |
 
 **Coverage:**
