@@ -33,7 +33,7 @@ export const ledgerRepo = {
       entry_type: entry.entry_type,
       ref_id: entry.ref_id ?? null,
       payment_hash: entry.payment_hash ?? null,
-      mode: (entry.mode ?? 'simulated') as 'simulated' | 'lightning',
+      mode: (entry.mode ?? 'simulated') as 'simulated' | 'lightning' | 'cashu',
     }).run();
   },
 

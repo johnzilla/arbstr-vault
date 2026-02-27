@@ -10,7 +10,10 @@ type AuditAction =
   | 'PAYMENT_REQUEST'
   | 'PAYMENT_SETTLED'
   | 'PAYMENT_FAILED'
-  | 'DEPOSIT';
+  | 'DEPOSIT'
+  | 'CASHU_MINT'
+  | 'CASHU_MELT'
+  | 'CASHU_KEYSET_SWAP';
 
 export interface AuditEntry {
   agent_id: string;

@@ -1,6 +1,25 @@
 import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
 import { ulid } from 'ulidx';
 
+export const cashuProofs = sqliteTable('cashu_proofs', {
+  id: text('id').primaryKey().$defaultFn(() => ulid()),
+  keyset_id: text('keyset_id').notNull(),
+  amount: integer('amount').notNull(),
+  secret: text('secret').notNull().unique(),
+  C: text('C').notNull(),
+  source_tx_id: text('source_tx_id'),
+  created_at: integer('created_at', { mode: 'timestamp_ms' })
+    .$defaultFn(() => new Date()).notNull(),
+});
+
+export const cashuPending = sqliteTable('cashu_pending', {
+  secret: text('secret').primaryKey(),
+  tx_id: text('tx_id').notNull(),
+  melt_quote_id: text('melt_quote_id'),
+  created_at: integer('created_at', { mode: 'timestamp_ms' })
+    .$defaultFn(() => new Date()).notNull(),
+});
+
 export const agents = sqliteTable('agents', {
   id: text('id').primaryKey().$defaultFn(() => `ag_${ulid()}`),
   name: text('name').notNull(),
@@ -37,7 +56,7 @@ export const ledgerEntries = sqliteTable('ledger_entries', {
   entry_type: text('entry_type', { enum: ['DEPOSIT', 'PAYMENT', 'REFUND', 'RESERVE', 'RELEASE'] }).notNull(),
   ref_id: text('ref_id'),
   payment_hash: text('payment_hash'),
-  mode: text('mode', { enum: ['simulated', 'lightning'] }).default('simulated'),
+  mode: text('mode', { enum: ['simulated', 'lightning', 'cashu'] }).default('simulated'),
   created_at: integer('created_at', { mode: 'timestamp_ms' })
     .$defaultFn(() => new Date())
     .notNull(),
@@ -54,6 +73,9 @@ export const auditLog = sqliteTable('audit_log', {
       'PAYMENT_SETTLED',
       'PAYMENT_FAILED',
       'DEPOSIT',
+      'CASHU_MINT',
+      'CASHU_MELT',
+      'CASHU_KEYSET_SWAP',
     ],
   }).notNull(),
   policy_decision: text('policy_decision', {

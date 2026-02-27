@@ -15,6 +15,13 @@
       "when": 1772155197821,
       "tag": "0001_white_whirlwind",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1772236526264,
+      "tag": "0002_easy_jetstream",
+      "breakpoints": true
     }
   ]
 }

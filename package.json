@@ -24,6 +24,7 @@
   },
   "homepage": "https://github.com/johnzilla/vaultwarden#readme",
   "dependencies": {
+    "@cashu/cashu-ts": "^3.5.0",
     "@fastify/bearer-auth": "^10.1.2",
     "better-sqlite3": "^12.6.2",
     "dotenv": "^17.3.1",
