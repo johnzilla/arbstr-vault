@@ -19,6 +19,7 @@ export const policies = sqliteTable('policies', {
     .unique(),
   max_transaction_msat: integer('max_transaction_msat').notNull().default(0),
   daily_limit_msat: integer('daily_limit_msat').notNull().default(0),
+  max_fee_msat: integer('max_fee_msat').default(1000),
   created_at: integer('created_at', { mode: 'timestamp_ms' })
     .$defaultFn(() => new Date())
     .notNull(),
@@ -33,8 +34,10 @@ export const ledgerEntries = sqliteTable('ledger_entries', {
     .notNull()
     .references(() => agents.id),
   amount_msat: integer('amount_msat').notNull(),
-  entry_type: text('entry_type', { enum: ['DEPOSIT', 'PAYMENT', 'REFUND'] }).notNull(),
+  entry_type: text('entry_type', { enum: ['DEPOSIT', 'PAYMENT', 'REFUND', 'RESERVE', 'RELEASE'] }).notNull(),
   ref_id: text('ref_id'),
+  payment_hash: text('payment_hash'),
+  mode: text('mode', { enum: ['simulated', 'lightning'] }).default('simulated'),
   created_at: integer('created_at', { mode: 'timestamp_ms' })
     .$defaultFn(() => new Date())
     .notNull(),

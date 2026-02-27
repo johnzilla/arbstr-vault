@@ -8,6 +8,13 @@
       "when": 1772115456961,
       "tag": "0000_redundant_nebula",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1772155197821,
+      "tag": "0001_white_whirlwind",
+      "breakpoints": true
     }
   ]
 }

@@ -9,14 +9,16 @@ export interface LedgerEntry {
   id?: string;
   agent_id: string;
   amount_msat: number;
-  entry_type: 'DEPOSIT' | 'PAYMENT' | 'REFUND';
+  entry_type: 'DEPOSIT' | 'PAYMENT' | 'REFUND' | 'RESERVE' | 'RELEASE';
   ref_id?: string;
+  payment_hash?: string;
+  mode?: string;
 }
 
 export interface ListOpts {
   cursor?: string;
   limit: number;
-  entry_type?: 'DEPOSIT' | 'PAYMENT' | 'REFUND';
+  entry_type?: 'DEPOSIT' | 'PAYMENT' | 'REFUND' | 'RESERVE' | 'RELEASE';
 }
 
 export const ledgerRepo = {
@@ -30,6 +32,8 @@ export const ledgerRepo = {
       amount_msat: entry.amount_msat,
       entry_type: entry.entry_type,
       ref_id: entry.ref_id ?? null,
+      payment_hash: entry.payment_hash ?? null,
+      mode: (entry.mode ?? 'simulated') as 'simulated' | 'lightning',
     }).run();
   },
 
@@ -87,5 +91,47 @@ export const ledgerRepo = {
       .orderBy(desc(ledgerEntries.id))
       .limit(opts.limit)
       .all();
+  },
+
+  /**
+   * Return all pending Lightning payments for crash recovery.
+   * Returns RESERVE entries with mode='lightning' that have no corresponding
+   * RELEASE or PAYMENT entry with the same ref_id.
+   * Used at startup to re-subscribe to in-flight HTLCs via TrackPaymentV2.
+   */
+  getPendingLightningPayments(db: Db): Array<{
+    id: string;
+    agent_id: string;
+    amount_msat: number;
+    payment_hash: string | null;
+    ref_id: string | null;
+  }> {
+    return db
+      .select({
+        id: ledgerEntries.id,
+        agent_id: ledgerEntries.agent_id,
+        amount_msat: ledgerEntries.amount_msat,
+        payment_hash: ledgerEntries.payment_hash,
+        ref_id: ledgerEntries.ref_id,
+      })
+      .from(ledgerEntries)
+      .where(
+        and(
+          eq(ledgerEntries.entry_type, 'RESERVE'),
+          eq(ledgerEntries.mode, 'lightning'),
+          sql`${ledgerEntries.ref_id} NOT IN (
+            SELECT ref_id FROM ${ledgerEntries} AS le2
+            WHERE le2.entry_type IN ('RELEASE', 'PAYMENT')
+            AND le2.ref_id IS NOT NULL
+          )`,
+        ),
+      )
+      .all() as Array<{
+        id: string;
+        agent_id: string;
+        amount_msat: number;
+        payment_hash: string | null;
+        ref_id: string | null;
+      }>;
   },
 };

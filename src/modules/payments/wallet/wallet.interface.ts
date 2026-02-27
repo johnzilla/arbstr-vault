@@ -14,6 +14,8 @@ export interface PaymentResult {
   status: 'SETTLED' | 'PENDING' | 'FAILED';
   mode: string;
   settled_at?: Date;
+  payment_hash?: string;
+  fee_msat?: number;
 }
 
 export interface WalletBackend {
