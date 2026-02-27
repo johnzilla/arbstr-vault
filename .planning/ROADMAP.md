@@ -49,9 +49,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 02-01-PLAN.md — Schema extension (payment_hash, max_fee_msat, RESERVE/RELEASE), config, LND client with macaroon verification
-- [ ] 02-02-PLAN.md — LightningWallet class, payment service RESERVE/RELEASE refactor, startup wiring with crash recovery
-- [ ] 02-03-PLAN.md — Payment status endpoint, Docker dev environment, and Lightning integration tests
+- [x] 02-01-PLAN.md — Schema extension (payment_hash, max_fee_msat, RESERVE/RELEASE), config, LND client with macaroon verification
+- [x] 02-02-PLAN.md — LightningWallet class, payment service RESERVE/RELEASE refactor, startup wiring with crash recovery
+- [x] 02-03-PLAN.md — Payment status endpoint, Docker dev environment, and Lightning integration tests
 
 ### Phase 3: Cashu Backend
 **Goal**: Agents can execute payments via the self-hosted Cashu hot wallet as a second rail, and the Treasury automatically routes payments between Lightning and Cashu based on amount and destination type
@@ -61,7 +61,12 @@ Plans:
   1. Agent can submit a payment request that the Treasury fulfills by minting, melting, or swapping Cashu tokens against the self-hosted Nutshell mint
   2. Treasury automatically routes a payment request to Lightning or Cashu without the agent specifying a rail — routing decision is observable in the audit log entry for that payment
   3. Concurrent redemption of Cashu proofs does not produce a double-spend; identical proof submissions are rejected by the PENDING lock before either settles
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 03-01-PLAN.md — Schema extensions, Cashu config, cashu-ts client, proof repo, and CashuWalletBackend
+- [ ] 03-02-PLAN.md — Payment routing layer, payments.service dual-rail refactor, Cashu startup with crash recovery
+- [ ] 03-03-PLAN.md — Cashu integration tests, Docker Nutshell service, payment status routing trace
 
 ### Phase 4: Operator Experience and Advanced Policy
 **Goal**: Operators have full visibility and control over all agents — including human approval for over-limit transactions, versioned policy history, balance alerts, and a complete operator dashboard endpoint
@@ -83,5 +88,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 |-------|----------------|--------|-----------|
 | 1. Foundation | 5/5 | Complete | 2026-02-26 |
 | 2. Lightning Backend | 3/3 | Complete   | 2026-02-27 |
-| 3. Cashu Backend | 0/TBD | Not started | - |
+| 3. Cashu Backend | 0/3 | Not started | - |
 | 4. Operator Experience and Advanced Policy | 0/TBD | Not started | - |
