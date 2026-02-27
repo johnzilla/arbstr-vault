@@ -7,6 +7,8 @@ export interface PaymentRequest {
   destination_type: string;
   destination: string;
   transaction_id: TransactionId;
+  /** Per-agent fee cap for Lightning routing fees (msat). Passed to LND as max_fee_mtokens. */
+  max_fee_msat?: number;
 }
 
 export interface PaymentResult {
