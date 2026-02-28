@@ -64,9 +64,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 03-01-PLAN.md — Schema extensions, Cashu config, cashu-ts client, proof repo, and CashuWalletBackend
-- [ ] 03-02-PLAN.md — Payment routing layer, payments.service dual-rail refactor, Cashu startup with crash recovery
-- [ ] 03-03-PLAN.md — Cashu integration tests, Docker Nutshell service, payment status routing trace
+- [x] 03-01-PLAN.md — Schema extensions, Cashu config, cashu-ts client, proof repo, and CashuWalletBackend
+- [x] 03-02-PLAN.md — Payment routing layer, payments.service dual-rail refactor, Cashu startup with crash recovery
+- [x] 03-03-PLAN.md — Cashu integration tests, Docker Nutshell service, payment status routing trace
 
 ### Phase 4: Operator Experience and Advanced Policy
 **Goal**: Operators have full visibility and control over all agents — including human approval for over-limit transactions, versioned policy history, balance alerts, and a complete operator dashboard endpoint
@@ -80,7 +80,7 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 04-01-PLAN.md — Policy versioning schema, webhook service, and point-in-time payment evaluation
+- [x] 04-01-PLAN.md — Policy versioning schema, webhook service, and point-in-time payment evaluation
 - [ ] 04-02-PLAN.md — Approval queue, REQUIRE_HUMAN_APPROVAL activation, operator approve/deny routes, timeout checker
 - [ ] 04-03-PLAN.md — Withdrawal endpoint, balance alert notifications, and operator dashboard
 
@@ -94,4 +94,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | 1. Foundation | 5/5 | Complete | 2026-02-26 |
 | 2. Lightning Backend | 3/3 | Complete   | 2026-02-27 |
 | 3. Cashu Backend | 3/3 | Complete   | 2026-02-28 |
-| 4. Operator Experience and Advanced Policy | 0/3 | Not started | - |
+| 4. Operator Experience and Advanced Policy | 1/3 | In Progress | - |

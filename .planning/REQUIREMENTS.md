@@ -34,8 +34,8 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **PLCY-05**: Policy engine defaults to DENY on any internal error (fail-closed)
 - [ ] **PLCY-06**: Over-limit transactions route to pending state with operator notification
 - [ ] **PLCY-07**: Pending approvals time out to DENY after configurable interval
-- [ ] **PLCY-08**: Policy changes are versioned with effective-from timestamps
-- [ ] **PLCY-09**: Policy evaluation uses the version active at payment request time
+- [x] **PLCY-08**: Policy changes are versioned with effective-from timestamps
+- [x] **PLCY-09**: Policy evaluation uses the version active at payment request time
 
 ### Observability
 
@@ -117,8 +117,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PLCY-05 | Phase 1 | Complete |
 | PLCY-06 | Phase 4 | Pending |
 | PLCY-07 | Phase 4 | Pending |
-| PLCY-08 | Phase 4 | Pending |
-| PLCY-09 | Phase 4 | Pending |
+| PLCY-08 | Phase 4 | Complete |
+| PLCY-09 | Phase 4 | Complete |
 | OBSV-01 | Phase 1 | Complete |
 | OBSV-02 | Phase 1 | Complete |
 | OBSV-03 | Phase 1 | Pending |

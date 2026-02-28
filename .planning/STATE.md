@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: unknown
-last_updated: "2026-02-28T00:23:32.516Z"
+status: in_progress
+last_updated: "2026-02-28T03:59:08Z"
 progress:
-  total_phases: 3
+  total_phases: 4
   completed_phases: 3
-  total_plans: 11
-  completed_plans: 11
+  total_plans: 14
+  completed_plans: 12
 ---
 
 # Project State
@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** Agents can request and execute payments within explicit policy limits, with all keys and connections centralized in the Treasury Service — never in the agents themselves
-**Current focus:** Phase 4 — Agent UX (phase 3 complete)
+**Current focus:** Phase 4 — Operator Experience and Advanced Policy
 
 ## Current Position
 
-Phase: 3 of 4 (Cashu Backend) — COMPLETE
-Plan: 3 of 3 in current phase — COMPLETE
-Status: 03-03 complete — Integration tests (14 tests), Docker Nutshell mint, payment status routing trace. Phase 3 complete.
-Last activity: 2026-02-28 — Completed 03-03: Cashu integration tests, Docker Nutshell, payment status routing trace
+Phase: 4 of 4 (Operator Experience and Advanced Policy)
+Plan: 1 of 3 in current phase — COMPLETE
+Status: 04-01 complete — Append-only policy versioning, point-in-time evaluation, webhook service, PATCH route.
+Last activity: 2026-02-28 — Completed 04-01: policy_versions table, webhookService, policyVersionsRepo, 5 tests
 
-Progress: [████████████] ~100% (Phase 3 of 3 done)
+Progress: [████████████░░░] ~85% (Phase 4 Plan 1 of 3 done)
 
 ## Performance Metrics
 
@@ -43,13 +43,15 @@ Progress: [████████████] ~100% (Phase 3 of 3 done)
 | 01-foundation | 5 | ~21 min | ~4.2 min |
 | 02-lightning-backend | 3 | ~13 min | ~4.3 min |
 | 03-cashu-backend | 3 | ~15 min | ~5 min |
+| 04-operator-experience | 1 done | ~8 min | ~8 min |
 
 **Recent Trend:**
-- Last 7 plans: 01-04 (4 min), 01-05 (6 min), 02-01 (3 min), 02-02 (5 min), 02-03 (5 min), 03-01 (5 min), 03-02 (5 min)
-- Trend: Stable at ~4-5 min/plan
+- Last 8 plans: 01-04 (4 min), 01-05 (6 min), 02-01 (3 min), 02-02 (5 min), 02-03 (5 min), 03-01 (5 min), 03-02 (5 min), 04-01 (8 min)
+- Trend: Stable at ~5-8 min/plan
 
 *Updated after each plan completion*
 | Phase 03 P03 | 5 | 2 tasks | 4 files |
+| Phase 04 P01 | 8 | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -98,6 +100,10 @@ Recent decisions affecting current work:
 - [Phase 03-cashu-backend]: CashuClient.getKeysets() is synchronous; crash recovery uses checkMeltQuote per PENDING op; keyset rotation writes CASHU_KEYSET_SWAP audit with agent_id='system'
 - [Phase 03]: Cashu PAYMENT ledger entry omits explicit id=txId when fallback after Lightning RESERVE — prevents UNIQUE constraint violation
 - [Phase 03]: Payment status routing trace prefers PAYMENT_SETTLED metadata; falls back to PAYMENT_REQUEST metadata for initial_rail
+- [Phase 04-01]: requestTimestamp = Date.now() captured before Phase 1 IMMEDIATE tx — point-in-time lookups use this snapshot for correct versioning even if policy changes mid-flight
+- [Phase 04-01]: processPayment falls back to agentsRepo.getWithPolicy (legacy policies table) when getVersionAt returns null — ensures test fixtures that only insert policies rows continue to pass
+- [Phase 04-01]: pendingApprovals table schema added in migration 0003 alongside policy_versions — Plan 02 will wire repo and service; schema-only for now
+- [Phase 04-01]: webhookService.send is fire-and-forget; callers use .catch(() => {}) to avoid blocking payment flow
 
 ### Pending Todos
 
@@ -111,6 +117,6 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-28
-Stopped at: Completed 03-03-PLAN.md — Integration tests, Docker Nutshell, payment status routing trace. Phase 3 complete.
-Resume file: .planning/phases/04-agent-ux/ (next phase)
+Stopped at: Completed 04-01-PLAN.md — Append-only policy versioning, point-in-time evaluation, webhook service, PATCH route.
+Resume file: .planning/phases/04-operator-experience-and-advanced-policy/04-02-PLAN.md
 Resume command: /gsd:execute-phase 4
