@@ -133,6 +133,19 @@ None - no external service configuration required. OPERATOR_WEBHOOK_URL and OPER
 - webhookService.send ready for Plan 02 (approval notifications) and Plan 03 (balance alerts)
 - Point-in-time policy evaluation confirmed working end-to-end
 
+## Self-Check: PASSED
+
+All key files verified present. All commits verified in git history.
+
+- FOUND: src/db/schema.ts (policyVersions, pendingApprovals tables)
+- FOUND: src/modules/webhook/webhook.service.ts
+- FOUND: src/modules/agents/agents.repo.ts (policyVersionsRepo)
+- FOUND: tests/unit/policy-versioning.test.ts (5 tests)
+- FOUND: src/db/migrations/0003_watery_paibok.sql
+- FOUND: .planning/phases/04-operator-experience-and-advanced-policy/04-01-SUMMARY.md
+- FOUND: commit f62f166 (Task 1)
+- FOUND: commit f863525 (Task 2)
+
 ---
 *Phase: 04-operator-experience-and-advanced-policy*
 *Completed: 2026-02-28*
