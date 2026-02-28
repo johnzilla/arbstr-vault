@@ -12,6 +12,7 @@ import { LightningStreamError } from './wallet/lightning.wallet.js';
 import { generateTransactionId } from '../../types.js';
 import type { PaymentResult } from './wallet/wallet.interface.js';
 import { config } from '../../config.js';
+import { alertsService } from '../alerts/alerts.service.js';
 
 // Full-schema DB type — matches app.ts and agents.repo.ts
 type DB = BetterSQLite3Database<typeof schema>;
@@ -511,6 +512,10 @@ export function createPaymentsService(walletOrOptions: WalletBackend | PaymentsS
                 });
               }
             }, { behavior: 'immediate' });
+
+            // Post-settlement balance alert check (OBSV-06)
+            // Fire-and-forget — must not affect payment response
+            alertsService.checkAndNotify(db as unknown as Db, agentId).catch(() => {});
           } else if (selectedRail === 'cashu') {
             // Cashu SETTLED: debit + audit atomically
             //
@@ -555,6 +560,10 @@ export function createPaymentsService(walletOrOptions: WalletBackend | PaymentsS
                 });
               }
             }, { behavior: 'immediate' });
+
+            // Post-settlement balance alert check (OBSV-06)
+            // Fire-and-forget — must not affect payment response
+            alertsService.checkAndNotify(db as unknown as Db, agentId).catch(() => {});
           } else {
             // Simulated SETTLED: keep existing behavior (ledger debit + audit atomically)
             db.transaction((tx) => {
@@ -575,6 +584,10 @@ export function createPaymentsService(walletOrOptions: WalletBackend | PaymentsS
                 ref_id: txId,
               });
             }, { behavior: 'immediate' });
+
+            // Post-settlement balance alert check (OBSV-06)
+            // Fire-and-forget — must not affect payment response
+            alertsService.checkAndNotify(db as unknown as Db, agentId).catch(() => {});
           }
 
           return {
