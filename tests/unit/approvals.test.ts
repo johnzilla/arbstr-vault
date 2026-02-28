@@ -129,8 +129,8 @@ describe('Approval lifecycle (PLCY-06, PLCY-07)', () => {
   });
 
   // Test 2: Operator approves pending payment
-  it('operator approves pending payment — approval changes to approved state', async () => {
-    const { app, db } = buildTestApp();
+  it('operator approves pending payment — payment settles and balance decreases', async () => {
+    const { app } = buildTestApp();
     await app.ready();
 
     const { agent_id, token } = await registerAgent(app, 'approve-test-agent');
@@ -167,8 +167,27 @@ describe('Approval lifecycle (PLCY-06, PLCY-07)', () => {
     expect(approveRes.statusCode).toBe(200);
     const approveBody = JSON.parse(approveRes.body);
     expect(approveBody.status).toBe('approved');
-    expect(approveBody.payment_status).toBe('APPROVED');
+    // payment_status should now be SETTLED (wallet executed after approval)
+    expect(approveBody.payment_status).toBe('SETTLED');
     expect(approveBody.transaction_id).toBe(txId);
+
+    // Balance after approval: deposit - payment = 100_000 - 10_000 = 90_000
+    const balRes = await app.inject({
+      method: 'GET',
+      url: `/agents/${agent_id}/balance`,
+      headers: { authorization: `Bearer ${token}` },
+    });
+    expect(balRes.statusCode).toBe(200);
+    expect(JSON.parse(balRes.body).balance_msat).toBe(90_000);
+
+    // Payment status should be SETTLED after approval
+    const statusRes = await app.inject({
+      method: 'GET',
+      url: `/agents/${agent_id}/payments/${txId}`,
+      headers: { authorization: `Bearer ${token}` },
+    });
+    expect(statusRes.statusCode).toBe(200);
+    expect(JSON.parse(statusRes.body).status).toBe('SETTLED');
   });
 
   // Test 3: Operator denies pending payment
@@ -250,13 +269,14 @@ describe('Approval lifecycle (PLCY-06, PLCY-07)', () => {
     });
     const approvalId = JSON.parse(listRes.body).approvals[0].id;
 
-    // First approve — should succeed
+    // First approve — should succeed (payment_status is now SETTLED, not APPROVED)
     const approveRes = await app.inject({
       method: 'POST',
       url: `/operator/approvals/${approvalId}/approve`,
       headers: { authorization: `Bearer ${TEST_ADMIN_TOKEN}` },
     });
     expect(approveRes.statusCode).toBe(200);
+    expect(JSON.parse(approveRes.body).payment_status).toBe('SETTLED');
 
     // Second resolve (deny) — should return 409
     const denyRes = await app.inject({
@@ -362,6 +382,75 @@ describe('Approval lifecycle (PLCY-06, PLCY-07)', () => {
     const timedOut = approvals.find((a: any) => a.transaction_id === txId);
     expect(timedOut).toBeDefined();
     expect(timedOut.status).toBe('timed_out');
+  });
+
+  // Test 8: Explicit gap closure — approved payment balance reflects settlement (not just reservation)
+  it('approved payment balance after approve reflects settlement (not permanent RESERVE leak)', async () => {
+    const { app } = buildTestApp();
+    await app.ready();
+
+    const { agent_id, token } = await registerAgent(app, 'gap-closure-agent');
+    // Step 1: Deposit 100_000 msat
+    await deposit(app, agent_id, 100_000);
+    // Step 2: Set policy with approval_timeout_ms
+    await setPolicyWithApproval(app, agent_id, {
+      maxTxMsat: 5_000,
+      dailyLimitMsat: 100_000,
+      approvalTimeoutMs: 300_000,
+    });
+
+    // Step 3: Submit over-limit payment of 10_000
+    const payRes = await submitPayment(app, agent_id, token, 10_000);
+    const payBody = JSON.parse(payRes.body);
+    expect(payBody.status).toBe('PENDING_APPROVAL');
+    const txId = payBody.transaction_id;
+
+    // Step 4: Verify balance is 90_000 (RESERVE deducted 10_000)
+    const balBeforeRes = await app.inject({
+      method: 'GET',
+      url: `/agents/${agent_id}/balance`,
+      headers: { authorization: `Bearer ${token}` },
+    });
+    expect(JSON.parse(balBeforeRes.body).balance_msat).toBe(90_000);
+
+    // Step 5: Find the approval
+    const listRes = await app.inject({
+      method: 'GET',
+      url: '/operator/approvals',
+      headers: { authorization: `Bearer ${TEST_ADMIN_TOKEN}` },
+    });
+    const approvalId = JSON.parse(listRes.body).approvals[0].id;
+
+    // Step 6: Approve it
+    const approveRes = await app.inject({
+      method: 'POST',
+      url: `/operator/approvals/${approvalId}/approve`,
+      headers: { authorization: `Bearer ${TEST_ADMIN_TOKEN}` },
+    });
+    expect(approveRes.statusCode).toBe(200);
+    const approveBody = JSON.parse(approveRes.body);
+
+    // Step 9: Verify approve response has payment_status: 'SETTLED'
+    expect(approveBody.payment_status).toBe('SETTLED');
+
+    // Step 7: Verify balance is still 90_000 after approval
+    // (RELEASE cancelled RESERVE, PAYMENT debited 10_000 — net result same as RESERVE alone)
+    // This closes the gap: balance correctly reflects a -10_000 payment, not a leaked RESERVE
+    const balAfterRes = await app.inject({
+      method: 'GET',
+      url: `/agents/${agent_id}/balance`,
+      headers: { authorization: `Bearer ${token}` },
+    });
+    expect(JSON.parse(balAfterRes.body).balance_msat).toBe(90_000);
+
+    // Step 8: Verify payment status is now SETTLED (not PENDING_APPROVAL or PENDING)
+    const statusRes = await app.inject({
+      method: 'GET',
+      url: `/agents/${agent_id}/payments/${txId}`,
+      headers: { authorization: `Bearer ${token}` },
+    });
+    expect(statusRes.statusCode).toBe(200);
+    expect(JSON.parse(statusRes.body).status).toBe('SETTLED');
   });
 
   // Test 7: Payment without approval_timeout_ms returns DENY (not REQUIRE_HUMAN_APPROVAL)
