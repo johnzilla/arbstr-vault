@@ -8,7 +8,7 @@ progress:
   total_phases: 3
   completed_phases: 2
   total_plans: 11
-  completed_plans: 9
+  completed_plans: 10
 ---
 
 # Project State
@@ -23,9 +23,9 @@ See: .planning/PROJECT.md (updated 2026-02-26)
 ## Current Position
 
 Phase: 3 of 4 (Cashu Backend) — IN PROGRESS
-Plan: 1 of 3 in current phase — COMPLETE
-Status: 03-01 complete — Cashu schema, CashuClient, proof repo, CashuWalletBackend done. Plan 02 (routing) next.
-Last activity: 2026-02-27 — Completed 03-01: Cashu infrastructure (schema, client, repo, wallet backend)
+Plan: 2 of 3 in current phase — COMPLETE
+Status: 03-02 complete — Dual-rail routing, selectRail(), fallback logic, Cashu startup with crash recovery and keyset rotation done. Plan 03 (pool funding) next.
+Last activity: 2026-02-28 — Completed 03-02: Payment routing layer and Cashu startup
 
 Progress: [██████████░] ~62%
 
@@ -42,10 +42,10 @@ Progress: [██████████░] ~62%
 |-------|-------|-------|----------|
 | 01-foundation | 5 | ~21 min | ~4.2 min |
 | 02-lightning-backend | 3 | ~13 min | ~4.3 min |
-| 03-cashu-backend | 1 | 5 min | 5 min |
+| 03-cashu-backend | 2 | ~10 min | ~5 min |
 
 **Recent Trend:**
-- Last 7 plans: 01-03 (4 min), 01-04 (4 min), 01-05 (6 min), 02-01 (3 min), 02-02 (5 min), 02-03 (5 min), 03-01 (5 min)
+- Last 7 plans: 01-04 (4 min), 01-05 (6 min), 02-01 (3 min), 02-02 (5 min), 02-03 (5 min), 03-01 (5 min), 03-02 (5 min)
 - Trend: Stable at ~4-5 min/plan
 
 *Updated after each plan completion*
@@ -92,6 +92,9 @@ Recent decisions affecting current work:
 - [Phase 02-lightning-backend]: verifyMacaroonScope throws FATAL Error; connectWithRetry catches it and calls process.exit(1)
 - [Phase 02-lightning-backend]: Mock Lightning tests use vi.mock('lightning') hoisted before module graph — no live LND needed for CI
 - [Phase 03-cashu-backend]: cashu-ts v3.5.0 Wallet.keyChain.getKeysets() used for keyset rotation; proof pool depletion returns FAILED (no auto-mint until Plan 02); MeltQuoteState.PAID enum used for type safety; WALLET_BACKEND=auto requires both Lightning AND Cashu env vars
+- [Phase 03-cashu-backend]: createPaymentsService backward compat: single non-simulatedWallet arg treated as lightningWallet (not simulatedWallet) to preserve RESERVE/RELEASE semantic from pre-refactor tests
+- [Phase 03-cashu-backend]: selectRail() not exported; preferred_rail agent hint overrides threshold routing; fallback adjusts RESERVE/RELEASE correctly per direction (Lightning->Cashu vs Cashu->Lightning)
+- [Phase 03-cashu-backend]: CashuClient.getKeysets() is synchronous; crash recovery uses checkMeltQuote per PENDING op; keyset rotation writes CASHU_KEYSET_SWAP audit with agent_id='system'
 
 ### Pending Todos
 
@@ -104,7 +107,7 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-27
-Stopped at: Completed 03-01-PLAN.md — Cashu infrastructure (schema, CashuClient, cashuRepo, CashuWalletBackend). Plan 03-02 (routing layer) next.
-Resume file: .planning/phases/03-cashu-backend/03-02-PLAN.md
+Last session: 2026-02-28
+Stopped at: Completed 03-02-PLAN.md — Dual-rail routing, Cashu startup with crash recovery and keyset rotation. Plan 03-03 (pool funding) next.
+Resume file: .planning/phases/03-cashu-backend/03-03-PLAN.md
 Resume command: /gsd:execute-phase 3
