@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-02-28T04:16:35.150Z"
+last_updated: "2026-02-28T04:26:00Z"
 progress:
   total_phases: 4
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 14
-  completed_plans: 13
+  completed_plans: 14
 ---
 
 # Project State
@@ -22,12 +22,12 @@ See: .planning/PROJECT.md (updated 2026-02-26)
 
 ## Current Position
 
-Phase: 4 of 4 (Operator Experience and Advanced Policy)
-Plan: 2 of 3 in current phase — COMPLETE
-Status: 04-02 complete — Approval lifecycle: approvalsRepo, approvalsService, operator approve/deny routes, PENDING_APPROVAL status, timeout checker.
-Last activity: 2026-02-28 — Completed 04-02: approvalsRepo, approvalsService, 7 tests, REQUIRE_HUMAN_APPROVAL activated
+Phase: 4 of 4 (Operator Experience and Advanced Policy) — COMPLETE
+Plan: 3 of 3 in current phase — COMPLETE
+Status: 04-03 complete — Withdrawal endpoint, balance alerts, operator dashboard, 11 tests, all requirements PAY-07/OBSV-06/OBSV-07 satisfied.
+Last activity: 2026-02-28 — Completed 04-03: POST /agents/:id/withdrawals, alertsService, GET /operator/dashboard, 11 tests
 
-Progress: [█████████████░░] ~90% (Phase 4 Plan 2 of 3 done)
+Progress: [███████████████] 100% (All 4 phases, 14 plans complete)
 
 ## Performance Metrics
 
@@ -43,7 +43,7 @@ Progress: [█████████████░░] ~90% (Phase 4 Plan 2 o
 | 01-foundation | 5 | ~21 min | ~4.2 min |
 | 02-lightning-backend | 3 | ~13 min | ~4.3 min |
 | 03-cashu-backend | 3 | ~15 min | ~5 min |
-| 04-operator-experience | 2 done | ~20 min | ~10 min |
+| 04-operator-experience | 3 done | ~27 min | ~9 min |
 
 **Recent Trend:**
 - Last 8 plans: 01-04 (4 min), 01-05 (6 min), 02-01 (3 min), 02-02 (5 min), 02-03 (5 min), 03-01 (5 min), 03-02 (5 min), 04-01 (8 min)
@@ -53,6 +53,7 @@ Progress: [█████████████░░] ~90% (Phase 4 Plan 2 o
 | Phase 03 P03 | 5 | 2 tasks | 4 files |
 | Phase 04 P01 | 8 | 2 tasks | 9 files |
 | Phase 04 P02 | 12 | 2 tasks | 12 files |
+| Phase 04 P03 | 7 | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -110,6 +111,11 @@ Recent decisions affecting current work:
 - [Phase 04-02]: CAS claimForResolution prevents double-resolve race between concurrent approve/deny/timeout
 - [Phase 04-02]: expireTimedOut runs in index.ts setInterval (not buildApp) — keeps tests unaffected by timer
 - [Phase 04-02]: policyVersionsRepo.insertVersion uses null (not undefined) for optional fields — prevents SQLite DEFAULT(300_000) silently enabling approval on all policies
+- [Phase 04-03]: Withdrawals always enter approval queue regardless of ALLOW policy outcome (locked decision)
+- [Phase 04-03]: Policy DENY (e.g., exceeds daily_limit_msat) prevents withdrawal from entering queue — Research Pitfall 6
+- [Phase 04-03]: Alert cooldown tracked in-memory Map (module singleton) — process restarts reset cooldowns, acceptable for personal-use
+- [Phase 04-03]: N+1 queries in dashboard are acceptable at personal-use scale (10-50 agents, sub-ms each on SQLite)
+- [Phase 04-03]: getLastPaymentTimestamp added to auditRepo as helper for dashboard last_payment_at field
 
 ### Pending Todos
 
@@ -123,6 +129,6 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-28
-Stopped at: Completed 04-02-PLAN.md — Approval lifecycle: approvalsRepo, approvalsService, operator approve/deny routes, PENDING_APPROVAL status, timeout checker, 7 tests.
-Resume file: .planning/phases/04-operator-experience-and-advanced-policy/04-03-PLAN.md
-Resume command: /gsd:execute-phase 4
+Stopped at: Completed 04-03-PLAN.md — Withdrawal endpoint, balance alerts, operator dashboard, 11 tests. All 4 phases complete.
+Resume file: (project complete — all 14 plans executed)
+Resume command: (none — project milestone v1.0 complete)

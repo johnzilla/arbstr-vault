@@ -23,7 +23,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **PAY-04**: Treasury can mint, melt, and swap Cashu tokens via self-hosted Nutshell mint on behalf of an agent
 - [x] **PAY-05**: Treasury auto-routes payments to Lightning or Cashu based on amount, fee, and destination type
 - [x] **PAY-06**: Payment responses include transaction reference (invoice paid, payment_hash, token ID)
-- [ ] **PAY-07**: Agent can propose a withdrawal to a master wallet or external address
+- [x] **PAY-07**: Agent can propose a withdrawal to a master wallet or external address
 
 ### Policy Engine
 
@@ -44,8 +44,8 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **OBSV-03**: Audit log is filterable by agent_id, action_type, and time range via API
 - [x] **OBSV-04**: All wallet private keys, LN macaroons, and Cashu mint credentials are stored only in the Treasury Service
 - [x] **OBSV-05**: Agent bearer tokens and secrets are masked in all log output
-- [ ] **OBSV-06**: Per-agent configurable balance alert threshold that notifies operator when balance drops below floor
-- [ ] **OBSV-07**: Operator can view all agents, their balances, recent spend, policy state, and daily utilization via API
+- [x] **OBSV-06**: Per-agent configurable balance alert threshold that notifies operator when balance drops below floor
+- [x] **OBSV-07**: Operator can view all agents, their balances, recent spend, policy state, and daily utilization via API
 
 ### Security
 
@@ -109,7 +109,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PAY-04 | Phase 3 | Complete |
 | PAY-05 | Phase 3 | Complete |
 | PAY-06 | Phase 2 | Complete |
-| PAY-07 | Phase 4 | Pending |
+| PAY-07 | Phase 4 | Complete |
 | PLCY-01 | Phase 1 | Complete |
 | PLCY-02 | Phase 1 | Complete |
 | PLCY-03 | Phase 1 | Complete |
@@ -124,8 +124,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | OBSV-03 | Phase 1 | Pending |
 | OBSV-04 | Phase 1 | Complete |
 | OBSV-05 | Phase 1 | Complete |
-| OBSV-06 | Phase 4 | Pending |
-| OBSV-07 | Phase 4 | Pending |
+| OBSV-06 | Phase 4 | Complete |
+| OBSV-07 | Phase 4 | Complete |
 | SEC-01 | Phase 1 | Complete |
 | SEC-02 | Phase 1 | Pending |
 | SEC-03 | Phase 1 | Complete |
