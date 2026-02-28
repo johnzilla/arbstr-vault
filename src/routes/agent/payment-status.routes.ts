@@ -61,6 +61,11 @@ export const agentPaymentStatusRoutes: FastifyPluginAsync = async (fastify) => {
             fee_msat: z.number().optional(),
             created_at: z.string(),
             settled_at: z.string().optional(),
+            // Routing trace fields (Phase 3)
+            cashu_token_id: z.string().optional(),
+            initial_rail: z.enum(['lightning', 'cashu']).optional(),
+            final_rail: z.enum(['lightning', 'cashu']).optional(),
+            fallback_occurred: z.boolean().optional(),
           }),
           404: z.object({
             error: z.object({
@@ -112,11 +117,15 @@ export const agentPaymentStatusRoutes: FastifyPluginAsync = async (fastify) => {
         });
       }
 
-      // Query audit log for settlement status
+      // Query audit log for settlement status and routing trace metadata
       // Narrow DB type for audit queries
       type NarrowDb = BetterSQLite3Database<Record<string, never>>;
       const auditEntries = (db as unknown as NarrowDb)
-        .select({ action: auditLog.action, created_at: auditLog.created_at })
+        .select({
+          action: auditLog.action,
+          created_at: auditLog.created_at,
+          metadata: auditLog.metadata,
+        })
         .from(auditLog)
         .where(
           and(
@@ -153,6 +162,28 @@ export const agentPaymentStatusRoutes: FastifyPluginAsync = async (fastify) => {
       // Amount from initiating entry (stored as negative for debits)
       const amountMsat = Math.abs(initiatingEntry.amount_msat);
 
+      // Extract routing trace from PAYMENT_REQUEST audit metadata (Phase 3)
+      // The PAYMENT_REQUEST audit entry is written in Phase 1 of processPayment
+      // and contains initial_rail, preferred_rail, and (on retry) fallback fields.
+      // PAYMENT_SETTLED also contains final routing trace for the completed path.
+      const paymentRequestEntry = auditEntries.find(
+        (e) => (e.action as string) === 'PAYMENT_REQUEST',
+      );
+      const paymentSettledEntry = auditEntries.find(
+        (e) => (e.action as string) === 'PAYMENT_SETTLED',
+      );
+
+      // Prefer PAYMENT_SETTLED metadata for final_rail and fallback_occurred
+      // (written after routing completes, includes both initial and final rail)
+      // Fall back to PAYMENT_REQUEST metadata for initial_rail
+      const settledMeta = paymentSettledEntry?.metadata as Record<string, unknown> | null | undefined;
+      const requestMeta = paymentRequestEntry?.metadata as Record<string, unknown> | null | undefined;
+
+      const initialRail = (settledMeta?.initial_rail ?? requestMeta?.initial_rail) as string | undefined;
+      const finalRail = settledMeta?.final_rail as string | undefined;
+      const fallbackOccurred = settledMeta?.fallback_occurred as boolean | undefined;
+      const cashuTokenId = settledMeta?.cashu_token_id as string | undefined;
+
       return reply.send({
         transaction_id: tx_id,
         payment_hash: paymentHash,
@@ -162,6 +193,11 @@ export const agentPaymentStatusRoutes: FastifyPluginAsync = async (fastify) => {
         fee_msat: feeMsat,
         created_at: initiatingEntry.created_at.toISOString(),
         settled_at: settledAt,
+        // Routing trace (Phase 3) — only present when rails are known
+        cashu_token_id: cashuTokenId,
+        initial_rail: initialRail as 'lightning' | 'cashu' | undefined,
+        final_rail: finalRail as 'lightning' | 'cashu' | undefined,
+        fallback_occurred: fallbackOccurred,
       });
     },
   );

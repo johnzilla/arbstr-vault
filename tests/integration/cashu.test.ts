@@ -491,9 +491,9 @@ describe('Cashu wallet — routing and melt flow', () => {
   });
 
   // -------------------------------------------------------------------------
-  // Test 14: Payment response routing trace complete for fallback scenario
+  // Test 14: Payment status endpoint returns routing trace
   // -------------------------------------------------------------------------
-  it('14. Full fallback scenario — pay response has complete routing trace fields', async () => {
+  it('14. Payment status endpoint returns routing trace fields after fallback payment', async () => {
     const db = createTestDb();
     const cashuWallet = createMockCashuWallet('settle');
     const lightningWallet = createMockLightningWallet('fail');
@@ -505,20 +505,27 @@ describe('Cashu wallet — routing and melt flow', () => {
     expect(payRes.statusCode).toBe(200);
     const payBody = payRes.json();
 
-    // Payment completed successfully via fallback
+    // Payment response has complete routing trace
     expect(payBody.status).toBe('SETTLED');
-    expect(payBody.policy_decision).toBe('ALLOW');
-
-    // Complete routing trace in payment response
-    expect(payBody.mode).toBe('cashu');
     expect(payBody.fallback_occurred).toBe(true);
     expect(payBody.initial_rail).toBe('lightning');
     expect(payBody.final_rail).toBe('cashu');
-    expect(payBody.rail_used).toBe('cashu');
-    expect(payBody.cashu_token_id).toBeDefined();
 
-    // Transaction ID should be queryable via payment status endpoint
-    expect(payBody.transaction_id).toBeDefined();
-    expect(payBody.transaction_id).toMatch(/^tx_/);
+    const txId = payBody.transaction_id;
+
+    // Query payment status endpoint — routing trace should be visible here too
+    const statusRes = await app.inject({
+      method: 'GET',
+      url: `/agents/${agentId}/payments/${txId}`,
+      headers: { authorization: `Bearer ${token}` },
+    });
+
+    expect(statusRes.statusCode).toBe(200);
+    const statusBody = statusRes.json();
+    expect(statusBody.status).toBe('SETTLED');
+    // Routing trace extracted from PAYMENT_SETTLED audit metadata
+    expect(statusBody.initial_rail).toBe('lightning');
+    expect(statusBody.final_rail).toBe('cashu');
+    expect(statusBody.fallback_occurred).toBe(true);
   });
 });

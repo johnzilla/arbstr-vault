@@ -1,10 +1,11 @@
 # Treasury Service — Regtest Development Environment
 #
-# Provides a self-contained Bitcoin regtest + Lightning Network for local testing
-# without requiring Polar GUI. Contains three services:
+# Provides a self-contained Bitcoin regtest + Lightning Network + Cashu Mint
+# for local testing without requiring Polar GUI. Contains four services:
 #   - bitcoind: Bitcoin Core in regtest mode (block producer)
 #   - lnd-alice: Treasury's LND node (our wallet)
 #   - lnd-bob: Test payee node (receives payments from Alice)
+#   - nutshell: Cashu Mint backed by lnd-alice (ecash)
 #
 # Usage:
 #   Start:    docker compose -f docker-compose.dev.yml up -d
@@ -18,6 +19,10 @@
 #   export LND_PORT=10009
 #   export LND_CERT_BASE64=$(cat ./lnd-shared/alice/tls.cert | base64 -w 0)
 #   export LND_MACAROON_BASE64=$(cat ./lnd-shared/alice/treasury.macaroon | base64 -w 0)
+#
+# For Cashu (dual-rail) mode, also set:
+#   export CASHU_MINT_URL=http://localhost:3338
+#   export WALLET_BACKEND=auto
 #
 # Manual regtest setup (after nodes start):
 #   1. Get Alice's address: docker exec lnd-alice lncli --network=regtest newaddress p2wkh
@@ -162,3 +167,39 @@ services:
       --alias=bob
       --color=#0099ff
       --noseedbackup
+
+  # ---------------------------------------------------------------------------
+  # Nutshell — Cashu Mint (ecash)
+  # ---------------------------------------------------------------------------
+  # Self-hosted Cashu mint backed by lnd-alice for Lightning.
+  # Treasury connects as a wallet client to mint/melt tokens.
+  # Used with WALLET_BACKEND=cashu or WALLET_BACKEND=auto.
+  #
+  # After starting:
+  #   export CASHU_MINT_URL=http://localhost:3338
+  #   export WALLET_BACKEND=auto  (or cashu)
+  #
+  nutshell:
+    image: cashubtc/nutshell:0.19.2
+    container_name: nutshell
+    restart: unless-stopped
+    depends_on:
+      - lnd-alice
+    volumes:
+      - lnd-shared:/shared:ro
+    ports:
+      - "3338:3338"
+    environment:
+      MINT_BACKEND_BOLT11_SAT: LndRestWallet
+      MINT_LND_REST_ENDPOINT: https://lnd-alice:8080
+      # Macaroon and cert read from shared volume — same LND node as Treasury
+      # Note: Nutshell needs admin or invoice macaroon for its own Lightning backend.
+      # The scoped treasury.macaroon may not have enough permissions for the MINT's
+      # internal operations. For dev, use LND's default admin.macaroon.
+      # In production, bake a separate macaroon for the mint.
+      MINT_LND_REST_CERT: /shared/alice/tls.cert
+      MINT_LND_REST_MACAROON: /shared/alice/treasury.macaroon
+      MINT_LISTEN_HOST: 0.0.0.0
+      MINT_LISTEN_PORT: 3338
+      MINT_PRIVATE_KEY: "0000000000000000000000000000000000000000000000000000000000000001"
+    command: poetry run mint
