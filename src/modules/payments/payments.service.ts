@@ -9,6 +9,7 @@ import type { WalletBackend } from './wallet/wallet.interface.js';
 import { LightningStreamError } from './wallet/lightning.wallet.js';
 import { generateTransactionId } from '../../types.js';
 import type { PaymentResult } from './wallet/wallet.interface.js';
+import { config } from '../../config.js';
 
 // Full-schema DB type — matches app.ts and agents.repo.ts
 type DB = BetterSQLite3Database<typeof schema>;
@@ -21,6 +22,8 @@ export interface PaymentRequest {
   purpose: string;
   destination_type: string;
   destination: string;
+  /** Optional agent hint to prefer a specific payment rail (overrides threshold routing) */
+  preferred_rail?: 'lightning' | 'cashu';
 }
 
 export interface PaymentResponse {
@@ -31,18 +34,92 @@ export interface PaymentResponse {
   status: 'SETTLED' | 'PENDING' | 'FAILED';
   payment_hash?: string;
   fee_msat?: number;
+  cashu_token_id?: string;
+  rail_used?: 'lightning' | 'cashu';
+  initial_rail?: 'lightning' | 'cashu';
+  final_rail?: 'lightning' | 'cashu';
+  fallback_occurred?: boolean;
+}
+
+export interface PaymentsServiceOptions {
+  lightningWallet?: WalletBackend;
+  cashuWallet?: WalletBackend;
+  simulatedWallet: WalletBackend;
+}
+
+/**
+ * Selects the payment rail based on amount, agent hint, and available wallets.
+ *
+ * Routing rules (in priority order):
+ * 1. If only simulated wallet available — always simulated
+ * 2. If only one rail available — use that rail
+ * 3. Agent preferred_rail hint overrides threshold routing
+ * 4. Amount-threshold routing: under threshold -> Cashu, at/above -> Lightning
+ *
+ * NOT exported — internal to the payments service.
+ */
+function selectRail(
+  amountMsat: number,
+  preferredRail: 'lightning' | 'cashu' | undefined,
+  thresholdMsat: number,
+  hasLightning: boolean,
+  hasCashu: boolean,
+): 'lightning' | 'cashu' | 'simulated' {
+  // If neither real rail available, fall back to simulated
+  if (!hasLightning && !hasCashu) return 'simulated';
+  // If only one rail available, use it
+  if (!hasCashu) return 'lightning';
+  if (!hasLightning) return 'cashu';
+
+  // Agent hint overrides automatic routing
+  if (preferredRail) return preferredRail;
+
+  // Amount-threshold routing:
+  // Under threshold -> Cashu (small payments via ecash), at or above -> Lightning
+  return amountMsat < thresholdMsat ? 'cashu' : 'lightning';
+}
+
+/**
+ * Returns true if a fallback to the other rail is possible.
+ */
+function canFallback(
+  initialRail: 'lightning' | 'cashu' | 'simulated',
+  options: PaymentsServiceOptions,
+): boolean {
+  if (initialRail === 'simulated') return false;
+  if (initialRail === 'lightning') return !!options.cashuWallet;
+  if (initialRail === 'cashu') return !!options.lightningWallet;
+  return false;
 }
 
 /**
  * Factory that creates a payments service bound to a specific wallet backend.
  *
- * This replaces the old singleton pattern so the wallet can be injected at
- * startup (simulated or lightning) without module-level side effects.
+ * Supports two call signatures:
+ * 1. Single WalletBackend (backward-compatible): createPaymentsService(wallet)
+ * 2. Options object with dual wallets: createPaymentsService({ lightningWallet, cashuWallet, simulatedWallet })
  *
- * @param wallet - WalletBackend to use for payment execution
+ * When both lightningWallet and cashuWallet are provided, payments are automatically
+ * routed based on the amount threshold (CASHU_THRESHOLD_MSAT config). The agent can
+ * also specify preferred_rail to override automatic routing. If the primary rail fails,
+ * the service automatically falls back to the other rail.
+ *
+ * @param walletOrOptions - WalletBackend (backward-compat) or PaymentsServiceOptions
  * @returns paymentsService-compatible object
  */
-export function createPaymentsService(wallet: WalletBackend) {
+export function createPaymentsService(walletOrOptions: WalletBackend | PaymentsServiceOptions) {
+  // Normalize to options format.
+  //
+  // Backward compat for single-wallet callers (used by existing tests and legacy code):
+  // - If the passed wallet IS the simulatedWallet singleton, use it as-is in the simulated slot.
+  // - If the passed wallet is NOT simulatedWallet (i.e. a custom/lightning wallet), treat it as
+  //   lightningWallet — this preserves the old `isLightning = wallet !== simulatedWallet` semantic.
+  const options: PaymentsServiceOptions = 'pay' in walletOrOptions
+    ? (walletOrOptions === simulatedWallet
+        ? { simulatedWallet: walletOrOptions as WalletBackend }
+        : { simulatedWallet, lightningWallet: walletOrOptions as WalletBackend })
+    : walletOrOptions as PaymentsServiceOptions;
+
   return {
     /**
      * Process a payment request for an agent.
@@ -62,10 +139,21 @@ export function createPaymentsService(wallet: WalletBackend) {
      *   Phase 2 — on FAILED: write RELEASE entry (+amount_msat) + PAYMENT_FAILED audit
      *   Phase 2 — on stream error (LightningStreamError): keep PENDING — payment may be in-flight
      *
+     * Cashu payment transaction structure:
+     *   Phase 1 (sync IMMEDIATE): read state, evaluate policy, write PAYMENT_REQUEST audit
+     *   Wallet call (async): CashuWalletBackend.pay() — selects+locks+deletes proofs in sync tx, then melts
+     *   Phase 2 — on SETTLED: write PAYMENT ledger debit + PAYMENT_SETTLED audit
+     *   Phase 2 — on FAILED: write PAYMENT_FAILED audit (CashuWalletBackend already restores proofs)
+     *
      * Simulated payment structure (unchanged from Phase 1):
      *   Phase 1 (sync IMMEDIATE): read state, evaluate policy, write PAYMENT_REQUEST audit
      *   Wallet call (async): simulatedWallet.pay() — always settles
      *   Phase 2 (sync IMMEDIATE): write PAYMENT ledger debit + PAYMENT_SETTLED audit atomically
+     *
+     * Dual-rail routing:
+     *   - selectRail() determines primary rail based on amount and optional preferred_rail hint
+     *   - If primary rail returns FAILED (and a fallback rail exists), try the other rail
+     *   - Routing trace (initial_rail, final_rail, fallback_occurred) written to audit metadata
      */
     async processPayment(db: DB, agentId: string, request: PaymentRequest): Promise<PaymentResponse> {
       const txId = generateTransactionId();
@@ -79,7 +167,19 @@ export function createPaymentsService(wallet: WalletBackend) {
         let denyOutcome: PolicyOutcome = 'DENY';
         let denyReason = '';
         let policyMaxFeeMsat = 1000; // default: 1 sat
-        const isLightning = wallet !== simulatedWallet;
+
+        const hasLightning = !!options.lightningWallet;
+        const hasCashu = !!options.cashuWallet;
+        const isDualRail = hasLightning && hasCashu;
+
+        // Determine routing before the DB transaction (no I/O — pure logic)
+        const initialRail = selectRail(
+          request.amount_msat,
+          request.preferred_rail,
+          config.CASHU_THRESHOLD_MSAT,
+          hasLightning,
+          hasCashu,
+        );
 
         db.transaction((tx) => {
           const tdb = tx as unknown as Db;
@@ -106,6 +206,7 @@ export function createPaymentsService(wallet: WalletBackend) {
           });
 
           // Write PAYMENT_REQUEST audit entry ALWAYS — even for DENY
+          // Include routing trace fields in audit metadata
           auditRepo.insert(tdb, {
             agent_id: agentId,
             action: 'PAYMENT_REQUEST',
@@ -117,6 +218,8 @@ export function createPaymentsService(wallet: WalletBackend) {
               asset: request.asset,
               purpose: request.purpose,
               destination_type: request.destination_type,
+              initial_rail: initialRail !== 'simulated' ? initialRail : undefined,
+              preferred_rail: request.preferred_rail,
             },
           });
 
@@ -134,10 +237,19 @@ export function createPaymentsService(wallet: WalletBackend) {
             transaction_id: txId,
             policy_decision: denyOutcome,
             reason: denyReason,
-            mode: isLightning ? 'lightning' : 'simulated',
+            mode: initialRail,
             status: 'FAILED',
           };
         }
+
+        // ---------------------------------------------------------------
+        // Helper: get wallet for a given rail
+        // ---------------------------------------------------------------
+        const getWallet = (rail: 'lightning' | 'cashu' | 'simulated'): WalletBackend => {
+          if (rail === 'cashu') return options.cashuWallet!;
+          if (rail === 'lightning') return options.lightningWallet!;
+          return options.simulatedWallet;
+        };
 
         // ---------------------------------------------------------------
         // Phase 1.5 (Lightning ONLY): Write RESERVE ledger entry BEFORE
@@ -152,7 +264,7 @@ export function createPaymentsService(wallet: WalletBackend) {
         // the RESERVE entry will have a payment_hash (written by the wallet's
         // 'paying' handler) — crash recovery re-subscribes via subscribeToPastPayment.
         // ---------------------------------------------------------------
-        if (isLightning) {
+        if (initialRail === 'lightning') {
           db.transaction((tx) => {
             const tdb = tx as unknown as Db;
             ledgerRepo.insert(tdb, {
@@ -168,18 +280,79 @@ export function createPaymentsService(wallet: WalletBackend) {
 
         // ---------------------------------------------------------------
         // Wallet call — outside transaction (async)
+        // Attempt primary rail, then fallback if FAILED.
         // ---------------------------------------------------------------
+        const walletReq = {
+          amount_msat: request.amount_msat,
+          asset: request.asset,
+          purpose: request.purpose,
+          destination_type: request.destination_type,
+          destination: request.destination,
+          transaction_id: txId,
+          max_fee_msat: policyMaxFeeMsat,
+        };
+
+        let selectedRail = initialRail;
+        let finalRail = initialRail;
+        let fallbackOccurred = false;
         let walletResult: PaymentResult;
+
         try {
-          walletResult = await wallet.pay({
-            amount_msat: request.amount_msat,
-            asset: request.asset,
-            purpose: request.purpose,
-            destination_type: request.destination_type,
-            destination: request.destination,
-            transaction_id: txId,
-            max_fee_msat: policyMaxFeeMsat,
-          });
+          walletResult = await getWallet(initialRail).pay({ ...walletReq });
+
+          // If primary rail returned FAILED and fallback is available, try other rail
+          if (walletResult.status === 'FAILED' && canFallback(initialRail, options)) {
+            const fallbackRail = initialRail === 'lightning' ? 'cashu' : 'lightning';
+
+            // For Lightning->Cashu fallback:
+            //   Lightning returned FAILED (not a stream error) — the RESERVE was already written in Phase 1.5.
+            //   We need to write the RELEASE now (before attempting Cashu).
+            if (initialRail === 'lightning') {
+              db.transaction((tx) => {
+                const tdb = tx as unknown as Db;
+                ledgerRepo.insert(tdb, {
+                  agent_id: agentId,
+                  amount_msat: request.amount_msat,
+                  entry_type: 'RELEASE',
+                  ref_id: txId,
+                  payment_hash: walletResult.payment_hash,
+                  mode: 'lightning',
+                });
+                auditRepo.insert(tdb, {
+                  agent_id: agentId,
+                  action: 'PAYMENT_FAILED',
+                  amount_msat: request.amount_msat,
+                  ref_id: txId,
+                  metadata: {
+                    payment_hash: walletResult.payment_hash ?? null,
+                    fallback_to: fallbackRail,
+                  },
+                });
+              }, { behavior: 'immediate' });
+            }
+            // For Cashu->Lightning fallback:
+            //   CashuWalletBackend already restored proofs on failure.
+            //   The Lightning fallback needs a new RESERVE entry.
+            if (fallbackRail === 'lightning') {
+              db.transaction((tx) => {
+                const tdb = tx as unknown as Db;
+                ledgerRepo.insert(tdb, {
+                  id: txId + '_fallback',
+                  agent_id: agentId,
+                  amount_msat: -request.amount_msat,
+                  entry_type: 'RESERVE',
+                  ref_id: txId,
+                  mode: 'lightning',
+                });
+              }, { behavior: 'immediate' });
+            }
+
+            const fallbackResult = await getWallet(fallbackRail).pay({ ...walletReq });
+            finalRail = fallbackRail;
+            fallbackOccurred = true;
+            selectedRail = fallbackRail;
+            walletResult = fallbackResult;
+          }
         } catch (walletErr) {
           // Handle LightningStreamError (gRPC disconnect) — keep PENDING
           if (walletErr instanceof LightningStreamError) {
@@ -197,6 +370,8 @@ export function createPaymentsService(wallet: WalletBackend) {
               mode: 'lightning',
               status: 'PENDING',
               payment_hash: walletErr.payment_hash,
+              initial_rail: initialRail !== 'simulated' ? initialRail as 'lightning' | 'cashu' : undefined,
+              final_rail: finalRail !== 'simulated' ? finalRail as 'lightning' | 'cashu' : undefined,
             };
           }
           // Non-stream errors: re-throw to be caught by outer try/catch
@@ -208,7 +383,7 @@ export function createPaymentsService(wallet: WalletBackend) {
         // ---------------------------------------------------------------
 
         if (walletResult.status === 'SETTLED') {
-          if (isLightning) {
+          if (selectedRail === 'lightning') {
             // Lightning SETTLED:
             // - RESERVE already debited the principal amount
             // - Write PAYMENT_SETTLED audit
@@ -221,7 +396,7 @@ export function createPaymentsService(wallet: WalletBackend) {
                 ledgerRepo.updatePaymentHash(tdb, txId, walletResult.payment_hash);
               }
 
-              // Write PAYMENT_SETTLED audit
+              // Write PAYMENT_SETTLED audit with routing trace
               auditRepo.insert(tdb, {
                 agent_id: agentId,
                 action: 'PAYMENT_SETTLED',
@@ -230,6 +405,9 @@ export function createPaymentsService(wallet: WalletBackend) {
                 metadata: {
                   payment_hash: walletResult.payment_hash ?? null,
                   fee_msat: walletResult.fee_msat ?? 0,
+                  initial_rail: initialRail !== 'simulated' ? initialRail : undefined,
+                  final_rail: finalRail !== 'simulated' ? finalRail : undefined,
+                  fallback_occurred: fallbackOccurred || undefined,
                 },
               });
 
@@ -242,6 +420,45 @@ export function createPaymentsService(wallet: WalletBackend) {
                   ref_id: txId,
                   payment_hash: walletResult.payment_hash,
                   mode: 'lightning',
+                });
+              }
+            }, { behavior: 'immediate' });
+          } else if (selectedRail === 'cashu') {
+            // Cashu SETTLED: debit + audit atomically
+            db.transaction((tx) => {
+              const tdb = tx as unknown as Db;
+
+              ledgerRepo.insert(tdb, {
+                id: txId,
+                agent_id: agentId,
+                amount_msat: -request.amount_msat,
+                entry_type: 'PAYMENT',
+                ref_id: txId,
+                mode: 'cashu',
+              });
+
+              auditRepo.insert(tdb, {
+                agent_id: agentId,
+                action: 'PAYMENT_SETTLED',
+                amount_msat: request.amount_msat,
+                ref_id: txId,
+                metadata: {
+                  cashu_token_id: walletResult.cashu_token_id,
+                  fee_msat: walletResult.fee_msat ?? 0,
+                  initial_rail: initialRail !== 'simulated' ? initialRail : undefined,
+                  final_rail: finalRail !== 'simulated' ? finalRail : undefined,
+                  fallback_occurred: fallbackOccurred || undefined,
+                },
+              });
+
+              // Write routing fee debit if cashu fee was charged
+              if (walletResult.fee_msat && walletResult.fee_msat > 0) {
+                ledgerRepo.insert(tdb, {
+                  agent_id: agentId,
+                  amount_msat: -walletResult.fee_msat,
+                  entry_type: 'PAYMENT',
+                  ref_id: txId,
+                  mode: 'cashu',
                 });
               }
             }, { behavior: 'immediate' });
@@ -274,37 +491,74 @@ export function createPaymentsService(wallet: WalletBackend) {
             status: walletResult.status,
             payment_hash: walletResult.payment_hash,
             fee_msat: walletResult.fee_msat,
+            cashu_token_id: walletResult.cashu_token_id,
+            rail_used: finalRail !== 'simulated' ? finalRail as 'lightning' | 'cashu' : undefined,
+            initial_rail: initialRail !== 'simulated' ? initialRail as 'lightning' | 'cashu' : undefined,
+            final_rail: finalRail !== 'simulated' ? finalRail as 'lightning' | 'cashu' : undefined,
+            fallback_occurred: fallbackOccurred || undefined,
           };
         }
 
         if (walletResult.status === 'FAILED') {
-          // Lightning FAILED: write RELEASE + PAYMENT_FAILED audit
-          // (Only Lightning can return FAILED — simulated always returns SETTLED)
-          db.transaction((tx) => {
-            const tdb = tx as unknown as Db;
+          if (selectedRail === 'lightning') {
+            // Lightning FAILED: write RELEASE + PAYMENT_FAILED audit
+            // (Only reached here if: (a) lightning-only setup, or (b) lightning was fallback)
+            db.transaction((tx) => {
+              const tdb = tx as unknown as Db;
 
-            // RELEASE credits back the reserved amount
-            ledgerRepo.insert(tdb, {
-              agent_id: agentId,
-              amount_msat: request.amount_msat,
-              entry_type: 'RELEASE',
-              ref_id: txId,
-              payment_hash: walletResult.payment_hash,
-              mode: 'lightning',
-            });
+              // RELEASE credits back the reserved amount
+              ledgerRepo.insert(tdb, {
+                agent_id: agentId,
+                amount_msat: request.amount_msat,
+                entry_type: 'RELEASE',
+                ref_id: txId,
+                payment_hash: walletResult.payment_hash,
+                mode: 'lightning',
+              });
 
-            // Write PAYMENT_FAILED audit with failure details
-            auditRepo.insert(tdb, {
-              agent_id: agentId,
-              action: 'PAYMENT_FAILED',
-              amount_msat: request.amount_msat,
-              ref_id: txId,
-              metadata: {
-                payment_hash: walletResult.payment_hash ?? null,
-                // failure_reason is stored in the result metadata for audit
-              },
-            });
-          }, { behavior: 'immediate' });
+              // Write PAYMENT_FAILED audit with failure details
+              auditRepo.insert(tdb, {
+                agent_id: agentId,
+                action: 'PAYMENT_FAILED',
+                amount_msat: request.amount_msat,
+                ref_id: txId,
+                metadata: {
+                  payment_hash: walletResult.payment_hash ?? null,
+                  initial_rail: initialRail !== 'simulated' ? initialRail : undefined,
+                  final_rail: finalRail !== 'simulated' ? finalRail : undefined,
+                  fallback_occurred: fallbackOccurred || undefined,
+                },
+              });
+            }, { behavior: 'immediate' });
+          } else if (selectedRail === 'cashu') {
+            // Cashu FAILED: CashuWalletBackend already restored proofs on failure
+            // Just write the audit entry — no ledger debit was made
+            db.transaction((tx) => {
+              const tdb = tx as unknown as Db;
+              auditRepo.insert(tdb, {
+                agent_id: agentId,
+                action: 'PAYMENT_FAILED',
+                amount_msat: request.amount_msat,
+                ref_id: txId,
+                metadata: {
+                  initial_rail: initialRail !== 'simulated' ? initialRail : undefined,
+                  final_rail: finalRail !== 'simulated' ? finalRail : undefined,
+                  fallback_occurred: fallbackOccurred || undefined,
+                },
+              });
+            }, { behavior: 'immediate' });
+          } else {
+            // Simulated FAILED (shouldn't normally happen, but handle for completeness)
+            db.transaction((tx) => {
+              const tdb = tx as unknown as Db;
+              auditRepo.insert(tdb, {
+                agent_id: agentId,
+                action: 'PAYMENT_FAILED',
+                amount_msat: request.amount_msat,
+                ref_id: txId,
+              });
+            }, { behavior: 'immediate' });
+          }
 
           return {
             transaction_id: txId,
@@ -312,6 +566,10 @@ export function createPaymentsService(wallet: WalletBackend) {
             mode: walletResult.mode,
             status: 'FAILED',
             payment_hash: walletResult.payment_hash,
+            rail_used: finalRail !== 'simulated' ? finalRail as 'lightning' | 'cashu' : undefined,
+            initial_rail: initialRail !== 'simulated' ? initialRail as 'lightning' | 'cashu' : undefined,
+            final_rail: finalRail !== 'simulated' ? finalRail as 'lightning' | 'cashu' : undefined,
+            fallback_occurred: fallbackOccurred || undefined,
           };
         }
 
@@ -322,6 +580,9 @@ export function createPaymentsService(wallet: WalletBackend) {
           mode: walletResult.mode,
           status: 'PENDING',
           payment_hash: walletResult.payment_hash,
+          rail_used: finalRail !== 'simulated' ? finalRail as 'lightning' | 'cashu' : undefined,
+          initial_rail: initialRail !== 'simulated' ? initialRail as 'lightning' | 'cashu' : undefined,
+          final_rail: finalRail !== 'simulated' ? finalRail as 'lightning' | 'cashu' : undefined,
         };
       } catch (err) {
         // Service-level fail-closed: any DB error or unexpected exception produces DENY
@@ -341,4 +602,4 @@ export function createPaymentsService(wallet: WalletBackend) {
 
 // Backward-compatible default singleton using simulated wallet
 // All existing tests and routes that import { paymentsService } directly continue to work
-export const paymentsService = createPaymentsService(simulatedWallet);
+export const paymentsService = createPaymentsService({ simulatedWallet });

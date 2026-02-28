@@ -23,10 +23,12 @@ export const agentPaymentRoutes: FastifyPluginAsync = async (fastify) => {
         }),
         body: z.object({
           amount_msat: z.number().int().positive(),
-          asset: z.enum(['BTC_simulated', 'BTC_lightning']),
+          asset: z.enum(['BTC_simulated', 'BTC_lightning', 'BTC_cashu']),
           purpose: z.string().min(1).max(200),
           destination_type: z.enum(['lightning_invoice', 'cashu_token', 'internal']),
           destination: z.string().min(1).max(2000),
+          /** Optional hint to prefer a specific payment rail; overrides automatic threshold routing */
+          preferred_rail: z.enum(['lightning', 'cashu']).optional(),
         }),
         response: {
           200: z.object({
@@ -37,6 +39,11 @@ export const agentPaymentRoutes: FastifyPluginAsync = async (fastify) => {
             status: z.enum(['SETTLED', 'PENDING', 'FAILED']),
             payment_hash: z.string().optional(),
             fee_msat: z.number().optional(),
+            cashu_token_id: z.string().optional(),
+            rail_used: z.enum(['lightning', 'cashu']).optional(),
+            initial_rail: z.enum(['lightning', 'cashu']).optional(),
+            final_rail: z.enum(['lightning', 'cashu']).optional(),
+            fallback_occurred: z.boolean().optional(),
           }),
         },
       },
@@ -49,17 +56,14 @@ export const agentPaymentRoutes: FastifyPluginAsync = async (fastify) => {
       // Process payment — always returns 200 regardless of policy decision.
       // HTTP status reflects request processing success; policy_decision reflects outcome.
       // Use app.paymentsService (bound to the wallet configured at startup)
-      // rather than a hardcoded import, so the Lightning wallet is used in production.
-      const result = await app.paymentsService.processPayment(db, id, body);
+      // rather than a hardcoded import, so the Lightning/Cashu wallet is used in production.
+      const result = await app.paymentsService.processPayment(db, id, {
+        ...body,
+        preferred_rail: body.preferred_rail,
+      });
 
       return reply.send({
-        transaction_id: result.transaction_id,
-        policy_decision: result.policy_decision,
-        reason: result.reason,
-        mode: result.mode,
-        status: result.status,
-        payment_hash: result.payment_hash,
-        fee_msat: result.fee_msat,
+        ...result,
       });
     },
   );
