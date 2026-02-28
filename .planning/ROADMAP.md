@@ -94,4 +94,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | 1. Foundation | 5/5 | Complete | 2026-02-26 |
 | 2. Lightning Backend | 3/3 | Complete   | 2026-02-27 |
 | 3. Cashu Backend | 3/3 | Complete   | 2026-02-28 |
-| 4. Operator Experience and Advanced Policy | 3/3 | Complete   | 2026-02-28 |
+| 4. Operator Experience and Advanced Policy | 4/4 | Complete   | 2026-02-28 |

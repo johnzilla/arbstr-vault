@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: unknown
-last_updated: "2026-02-28T04:26:00Z"
+status: complete
+last_updated: "2026-02-28T22:32:00Z"
 progress:
   total_phases: 4
   completed_phases: 4
-  total_plans: 14
-  completed_plans: 14
+  total_plans: 15
+  completed_plans: 15
 ---
 
 # Project State
@@ -23,11 +23,11 @@ See: .planning/PROJECT.md (updated 2026-02-26)
 ## Current Position
 
 Phase: 4 of 4 (Operator Experience and Advanced Policy) — COMPLETE
-Plan: 3 of 3 in current phase — COMPLETE
-Status: 04-03 complete — Withdrawal endpoint, balance alerts, operator dashboard, 11 tests, all requirements PAY-07/OBSV-06/OBSV-07 satisfied.
-Last activity: 2026-02-28 — Completed 04-03: POST /agents/:id/withdrawals, alertsService, GET /operator/dashboard, 11 tests
+Plan: 4 of 4 in current phase — COMPLETE
+Status: 04-04 complete — Approval execution gap closed; executeApprovedPayment added with RESERVE+RELEASE+PAYMENT triple-entry; 8 approval tests pass.
+Last activity: 2026-02-28 — Completed 04-04: executeApprovedPayment method, approve route wiring, 8 updated/added tests
 
-Progress: [███████████████] 100% (All 4 phases, 14 plans complete)
+Progress: [███████████████] 100% (All 4 phases, 15 plans complete)
 
 ## Performance Metrics
 
@@ -43,7 +43,7 @@ Progress: [███████████████] 100% (All 4 phases, 14
 | 01-foundation | 5 | ~21 min | ~4.2 min |
 | 02-lightning-backend | 3 | ~13 min | ~4.3 min |
 | 03-cashu-backend | 3 | ~15 min | ~5 min |
-| 04-operator-experience | 3 done | ~27 min | ~9 min |
+| 04-operator-experience | 4 done | ~30 min | ~7.5 min |
 
 **Recent Trend:**
 - Last 8 plans: 01-04 (4 min), 01-05 (6 min), 02-01 (3 min), 02-02 (5 min), 02-03 (5 min), 03-01 (5 min), 03-02 (5 min), 04-01 (8 min)
@@ -54,6 +54,7 @@ Progress: [███████████████] 100% (All 4 phases, 14
 | Phase 04 P01 | 8 | 2 tasks | 9 files |
 | Phase 04 P02 | 12 | 2 tasks | 12 files |
 | Phase 04 P03 | 7 | 2 tasks | 7 files |
+| Phase 04 P04 | 3 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -116,6 +117,10 @@ Recent decisions affecting current work:
 - [Phase 04-03]: Alert cooldown tracked in-memory Map (module singleton) — process restarts reset cooldowns, acceptable for personal-use
 - [Phase 04-03]: N+1 queries in dashboard are acceptable at personal-use scale (10-50 agents, sub-ms each on SQLite)
 - [Phase 04-03]: getLastPaymentTimestamp added to auditRepo as helper for dashboard last_payment_at field
+- [Phase 04-04]: RESERVE+RELEASE+PAYMENT triple-entry for approved payments: avoids upgrading existing RESERVE; RELEASE cancels hold, PAYMENT is actual debit. Net: -amount_msat correct.
+- [Phase 04-04]: executeApprovedPayment uses options.simulatedWallet; approval was created in simulated mode so simulated wallet always correct
+- [Phase 04-04]: No explicit id on PAYMENT entry — RESERVE already owns id=transactionId; drizzle auto-generates PAYMENT entry id
+- [Phase 04-04]: TransactionId branded cast required when passing stored transactionId string to wallet PaymentRequest
 
 ### Pending Todos
 
@@ -129,6 +134,6 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-28
-Stopped at: Completed 04-03-PLAN.md — Withdrawal endpoint, balance alerts, operator dashboard, 11 tests. All 4 phases complete.
-Resume file: (project complete — all 14 plans executed)
+Stopped at: Completed 04-04-PLAN.md — Approval execution gap closed; executeApprovedPayment method, 8 approval tests pass. All 4 phases, 15 plans complete.
+Resume file: (project complete — all 15 plans executed)
 Resume command: (none — project milestone v1.0 complete)
