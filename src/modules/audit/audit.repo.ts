@@ -1,4 +1,4 @@
-import { eq, and, gt, gte, lte, desc } from 'drizzle-orm';
+import { eq, and, gt, gte, lte, desc, inArray } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { auditLog } from '../../db/schema.js';
 
@@ -84,5 +84,25 @@ export const auditRepo = {
       .orderBy(desc(auditLog.id))
       .limit(opts.limit)
       .all();
+  },
+
+  /**
+   * Get the timestamp of the most recent PAYMENT_SETTLED or PAYMENT_FAILED audit entry for an agent.
+   * Returns the ISO string, or null if no payments have been processed.
+   * Used by the operator dashboard (Plan 03) for last_payment_at field.
+   */
+  getLastPaymentTimestamp(db: Db, agentId: string): string | null {
+    const row = db.select({ created_at: auditLog.created_at })
+      .from(auditLog)
+      .where(
+        and(
+          eq(auditLog.agent_id, agentId),
+          inArray(auditLog.action, ['PAYMENT_SETTLED', 'PAYMENT_FAILED']),
+        ),
+      )
+      .orderBy(desc(auditLog.created_at))
+      .limit(1)
+      .get();
+    return row?.created_at ? row.created_at.toISOString() : null;
   },
 };

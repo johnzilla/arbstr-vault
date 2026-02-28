@@ -4,10 +4,12 @@ import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod
 import { adminAgentRoutes } from './routes/admin/agents.routes.js';
 import { adminDepositRoutes } from './routes/admin/deposit.routes.js';
 import { adminApprovalsRoutes } from './routes/admin/approvals.routes.js';
+import { adminDashboardRoutes } from './routes/admin/dashboard.routes.js';
 import { agentBalanceRoutes } from './routes/agent/balance.routes.js';
 import { agentHistoryRoutes } from './routes/agent/history.routes.js';
 import { agentPaymentRoutes } from './routes/agent/payments.routes.js';
 import { agentPaymentStatusRoutes } from './routes/agent/payment-status.routes.js';
+import { agentWithdrawalRoutes } from './routes/agent/withdrawals.routes.js';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type * as schema from './db/schema.js';
 import { db as defaultDb } from './db/client.js';
@@ -127,12 +129,14 @@ export function buildApp(
   app.register(adminAgentRoutes);
   app.register(adminDepositRoutes);
   app.register(adminApprovalsRoutes);
+  app.register(adminDashboardRoutes);
 
   // Agent routes (agent-scoped)
   app.register(agentBalanceRoutes);
   app.register(agentHistoryRoutes);
   app.register(agentPaymentRoutes);
   app.register(agentPaymentStatusRoutes);
+  app.register(agentWithdrawalRoutes);
 
   return app;
 }
