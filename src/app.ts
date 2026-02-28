@@ -3,6 +3,7 @@ import type { DestinationStream } from 'pino';
 import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod';
 import { adminAgentRoutes } from './routes/admin/agents.routes.js';
 import { adminDepositRoutes } from './routes/admin/deposit.routes.js';
+import { adminApprovalsRoutes } from './routes/admin/approvals.routes.js';
 import { agentBalanceRoutes } from './routes/agent/balance.routes.js';
 import { agentHistoryRoutes } from './routes/agent/history.routes.js';
 import { agentPaymentRoutes } from './routes/agent/payments.routes.js';
@@ -125,6 +126,7 @@ export function buildApp(
   // Admin routes (operator-scoped)
   app.register(adminAgentRoutes);
   app.register(adminDepositRoutes);
+  app.register(adminApprovalsRoutes);
 
   // Agent routes (agent-scoped)
   app.register(agentBalanceRoutes);

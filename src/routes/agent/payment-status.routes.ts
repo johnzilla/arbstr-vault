@@ -2,7 +2,7 @@ import type { FastifyPluginAsync } from 'fastify';
 import { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { z } from 'zod/v4';
 import { agentAuth } from '../../middleware/agentAuth.js';
-import { ledgerEntries, auditLog } from '../../db/schema.js';
+import { ledgerEntries, auditLog, pendingApprovals } from '../../db/schema.js';
 import { eq, and } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type * as schema from '../../db/schema.js';
@@ -15,8 +15,12 @@ type DB = BetterSQLite3Database<typeof schema>;
  * Status derivation logic:
  * - If audit_log has PAYMENT_SETTLED action for ref_id -> SETTLED
  * - If audit_log has PAYMENT_FAILED action for ref_id -> FAILED
+ * - If audit_log has APPROVAL_TIMEOUT or APPROVAL_DENIED -> FAILED
  * - If only PAYMENT_REQUEST in audit_log -> PENDING
  * - Fallback: derive from ledger entry types (RELEASE -> FAILED, PAYMENT -> SETTLED, RESERVE only -> PENDING)
+ *
+ * Note: PENDING_APPROVAL is determined in the route handler (after this function returns PENDING)
+ * by checking the pending_approvals table.
  */
 function determinePaymentStatus(
   entries: Array<{ entry_type: string }>,
@@ -25,6 +29,7 @@ function determinePaymentStatus(
   // Prefer audit log for authoritative status
   if (auditActions.includes('PAYMENT_SETTLED')) return 'SETTLED';
   if (auditActions.includes('PAYMENT_FAILED')) return 'FAILED';
+  if (auditActions.includes('APPROVAL_TIMEOUT') || auditActions.includes('APPROVAL_DENIED')) return 'FAILED';
 
   // Fallback: derive from ledger entry types
   const entryTypes = new Set(entries.map((e) => e.entry_type));
@@ -55,7 +60,7 @@ export const agentPaymentStatusRoutes: FastifyPluginAsync = async (fastify) => {
           200: z.object({
             transaction_id: z.string(),
             payment_hash: z.string().optional(),
-            status: z.enum(['PENDING', 'SETTLED', 'FAILED']),
+            status: z.enum(['PENDING', 'SETTLED', 'FAILED', 'PENDING_APPROVAL']),
             mode: z.string(),
             amount_msat: z.number(),
             fee_msat: z.number().optional(),
@@ -138,7 +143,24 @@ export const agentPaymentStatusRoutes: FastifyPluginAsync = async (fastify) => {
       const auditActions = auditEntries.map((e) => e.action as string);
 
       // Determine status using audit log (authoritative) + ledger entry types (fallback)
-      const status = determinePaymentStatus(allEntries, auditActions);
+      let status: 'SETTLED' | 'PENDING' | 'FAILED' | 'PENDING_APPROVAL' = determinePaymentStatus(allEntries, auditActions);
+
+      // Disambiguate PENDING vs PENDING_APPROVAL (Research Pitfall 2).
+      // A RESERVE entry with a pending_approvals row = awaiting human approval.
+      // A RESERVE entry without one = Lightning in-flight PENDING.
+      if (status === 'PENDING') {
+        const approval = (db as unknown as NarrowDb)
+          .select()
+          .from(pendingApprovals)
+          .where(
+            and(
+              eq(pendingApprovals.transaction_id, tx_id),
+              eq(pendingApprovals.status, 'pending'),
+            ),
+          )
+          .get();
+        if (approval) status = 'PENDING_APPROVAL';
+      }
 
       // Get the primary initiating entry for amount/hash/mode/timestamps
       // RESERVE or PAYMENT entries (whichever is the original, identified by id=txId)

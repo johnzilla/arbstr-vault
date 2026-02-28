@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { WalletBackend } from './modules/payments/wallet/wallet.interface.js';
+import { approvalsService } from './modules/approvals/approvals.service.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -49,6 +50,22 @@ async function main() {
     app.log.error(err);
     process.exit(1);
   }
+
+  // Approval timeout checker — polls every 30s for expired pending approvals
+  // Runs here (not in buildApp) so tests with in-memory DBs are never affected.
+  const TIMEOUT_POLL_INTERVAL_MS = 30_000;
+  const timeoutInterval = setInterval(() => {
+    try {
+      approvalsService.expireTimedOut(db as unknown as Db);
+    } catch (err) {
+      app.log.error({ err }, 'Approval timeout checker error');
+    }
+  }, TIMEOUT_POLL_INTERVAL_MS);
+
+  // Clean up on shutdown
+  app.addHook('onClose', () => {
+    clearInterval(timeoutInterval);
+  });
 }
 
 main();

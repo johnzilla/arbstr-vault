@@ -224,10 +224,12 @@ export const policyVersionsRepo = {
         effective_from: values.effective_from,
         max_transaction_msat: values.max_transaction_msat,
         daily_limit_msat: values.daily_limit_msat,
-        max_fee_msat: values.max_fee_msat,
-        approval_timeout_ms: values.approval_timeout_ms,
-        alert_floor_msat: values.alert_floor_msat,
-        alert_cooldown_ms: values.alert_cooldown_ms,
+        max_fee_msat: values.max_fee_msat ?? null,
+        // Explicitly store null when not provided — prevents SQLite DEFAULT from activating.
+        // null means "no approval configured"; a positive value enables human approval routing.
+        approval_timeout_ms: values.approval_timeout_ms ?? null,
+        alert_floor_msat: values.alert_floor_msat ?? null,
+        alert_cooldown_ms: values.alert_cooldown_ms ?? null,
       })
       .returning()
       .all();
