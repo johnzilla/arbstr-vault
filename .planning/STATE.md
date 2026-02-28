@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-02-27T01:42:58.213Z"
+last_updated: "2026-02-28T00:01:03.412Z"
 progress:
-  total_phases: 2
+  total_phases: 3
   completed_phases: 2
-  total_plans: 8
-  completed_plans: 8
+  total_plans: 11
+  completed_plans: 9
 ---
 
 # Project State
@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** Agents can request and execute payments within explicit policy limits, with all keys and connections centralized in the Treasury Service — never in the agents themselves
-**Current focus:** Phase 2 — Lightning (phase 1 complete)
+**Current focus:** Phase 3 — Cashu Backend (phase 2 complete)
 
 ## Current Position
 
-Phase: 2 of 4 (Lightning Backend) — COMPLETE
-Plan: 3 of 3 in current phase — COMPLETE
-Status: Phase 2 complete — 02-01 + 02-02 + 02-03 all done. Phase 3 (Cashu) next.
-Last activity: 2026-02-27 — Completed 02-03: Payment status endpoint + Lightning tests + Docker dev environment
+Phase: 3 of 4 (Cashu Backend) — IN PROGRESS
+Plan: 1 of 3 in current phase — COMPLETE
+Status: 03-01 complete — Cashu schema, CashuClient, proof repo, CashuWalletBackend done. Plan 02 (routing) next.
+Last activity: 2026-02-27 — Completed 03-01: Cashu infrastructure (schema, client, repo, wallet backend)
 
-Progress: [█████████░] ~57%
+Progress: [██████████░] ~62%
 
 ## Performance Metrics
 
@@ -42,9 +42,10 @@ Progress: [█████████░] ~57%
 |-------|-------|-------|----------|
 | 01-foundation | 5 | ~21 min | ~4.2 min |
 | 02-lightning-backend | 3 | ~13 min | ~4.3 min |
+| 03-cashu-backend | 1 | 5 min | 5 min |
 
 **Recent Trend:**
-- Last 7 plans: 01-03 (4 min), 01-04 (4 min), 01-05 (6 min), 02-01 (3 min), 02-02 (5 min), 02-03 (5 min)
+- Last 7 plans: 01-03 (4 min), 01-04 (4 min), 01-05 (6 min), 02-01 (3 min), 02-02 (5 min), 02-03 (5 min), 03-01 (5 min)
 - Trend: Stable at ~4-5 min/plan
 
 *Updated after each plan completion*
@@ -90,6 +91,7 @@ Recent decisions affecting current work:
 - [Phase 02-lightning-backend]: Audit log is authoritative for payment status (PAYMENT_SETTLED/PAYMENT_FAILED actions); ledger entry types are fallback
 - [Phase 02-lightning-backend]: verifyMacaroonScope throws FATAL Error; connectWithRetry catches it and calls process.exit(1)
 - [Phase 02-lightning-backend]: Mock Lightning tests use vi.mock('lightning') hoisted before module graph — no live LND needed for CI
+- [Phase 03-cashu-backend]: cashu-ts v3.5.0 Wallet.keyChain.getKeysets() used for keyset rotation; proof pool depletion returns FAILED (no auto-mint until Plan 02); MeltQuoteState.PAID enum used for type safety; WALLET_BACKEND=auto requires both Lightning AND Cashu env vars
 
 ### Pending Todos
 
@@ -103,6 +105,6 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Completed 02-03-PLAN.md — Payment status endpoint + Lightning integration tests + Docker dev environment. Phase 2 complete.
-Resume file: .planning/phases/03-cashu-wallet/ (Phase 3 planning needed)
+Stopped at: Completed 03-01-PLAN.md — Cashu infrastructure (schema, CashuClient, cashuRepo, CashuWalletBackend). Plan 03-02 (routing layer) next.
+Resume file: .planning/phases/03-cashu-backend/03-02-PLAN.md
 Resume command: /gsd:execute-phase 3
