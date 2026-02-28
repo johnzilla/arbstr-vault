@@ -9,7 +9,7 @@ import { evaluatePolicy, type PolicyOutcome } from '../policy/policy.engine.js';
 import { simulatedWallet } from './wallet/simulated.wallet.js';
 import type { WalletBackend } from './wallet/wallet.interface.js';
 import { LightningStreamError } from './wallet/lightning.wallet.js';
-import { generateTransactionId } from '../../types.js';
+import { generateTransactionId, type TransactionId } from '../../types.js';
 import type { PaymentResult } from './wallet/wallet.interface.js';
 import { config } from '../../config.js';
 import { alertsService } from '../alerts/alerts.service.js';
@@ -124,6 +124,140 @@ export function createPaymentsService(walletOrOptions: WalletBackend | PaymentsS
     : walletOrOptions as PaymentsServiceOptions;
 
   return {
+    /**
+     * Execute a wallet payment after an operator approves a pending approval.
+     *
+     * The RESERVE ledger entry was already written when REQUIRE_HUMAN_APPROVAL was triggered.
+     * This method:
+     *   1. Calls the simulated wallet to execute the payment
+     *   2. On SETTLED: writes RELEASE (cancels RESERVE) + PAYMENT (actual debit) + PAYMENT_SETTLED audit
+     *   3. On FAILED: writes RELEASE (restores reserved balance) + PAYMENT_FAILED audit
+     *
+     * Net ledger effect for settled approval:
+     *   RESERVE: -amount_msat (written at PENDING_APPROVAL time)
+     *   RELEASE: +amount_msat (cancels the hold)
+     *   PAYMENT: -amount_msat (the actual payment debit)
+     *   Net: -amount_msat (agent spent the payment amount)
+     *
+     * Fail-closed: any unexpected error writes RELEASE + PAYMENT_FAILED and returns FAILED.
+     */
+    async executeApprovedPayment(
+      db: DB,
+      agentId: string,
+      transactionId: string,
+      amountMsat: number,
+      destination: string | null,
+    ): Promise<{ status: 'SETTLED' | 'FAILED'; payment_hash?: string; fee_msat?: number }> {
+      try {
+        const walletReq = {
+          amount_msat: amountMsat,
+          asset: 'BTC_simulated',
+          purpose: 'approved_payment',
+          destination_type: 'internal',
+          destination: destination ?? 'approved',
+          transaction_id: transactionId as TransactionId,
+          max_fee_msat: 1000,
+        };
+
+        let walletResult: PaymentResult;
+        try {
+          walletResult = await options.simulatedWallet.pay(walletReq);
+        } catch (_walletErr) {
+          // Treat wallet call exceptions as FAILED
+          walletResult = { transaction_id: transactionId as TransactionId, status: 'FAILED', mode: 'simulated' };
+        }
+
+        if (walletResult.status === 'SETTLED') {
+          db.transaction((tx) => {
+            const tdb = tx as unknown as Db;
+
+            // Write PAYMENT entry — the actual debit (do NOT reuse transactionId as id,
+            // the RESERVE already owns that id; let drizzle auto-generate a new id)
+            ledgerRepo.insert(tdb, {
+              agent_id: agentId,
+              amount_msat: -amountMsat,
+              entry_type: 'PAYMENT',
+              ref_id: transactionId,
+              mode: 'simulated',
+            });
+
+            // Write RELEASE to cancel the original RESERVE (net: RESERVE + RELEASE = 0)
+            ledgerRepo.insert(tdb, {
+              agent_id: agentId,
+              amount_msat: amountMsat,
+              entry_type: 'RELEASE',
+              ref_id: transactionId,
+              mode: 'simulated',
+            });
+
+            // Write PAYMENT_SETTLED audit entry
+            auditRepo.insert(tdb, {
+              agent_id: agentId,
+              action: 'PAYMENT_SETTLED',
+              amount_msat: amountMsat,
+              ref_id: transactionId,
+              metadata: { approval_execution: true },
+            });
+          }, { behavior: 'immediate' });
+
+          // Post-settlement balance alert check (OBSV-06)
+          alertsService.checkAndNotify(db as unknown as Db, agentId).catch(() => {});
+
+          return { status: 'SETTLED' };
+        }
+
+        // FAILED path — write RELEASE to restore reserved balance + PAYMENT_FAILED audit
+        db.transaction((tx) => {
+          const tdb = tx as unknown as Db;
+
+          ledgerRepo.insert(tdb, {
+            agent_id: agentId,
+            amount_msat: amountMsat,
+            entry_type: 'RELEASE',
+            ref_id: transactionId,
+            mode: 'simulated',
+          });
+
+          auditRepo.insert(tdb, {
+            agent_id: agentId,
+            action: 'PAYMENT_FAILED',
+            amount_msat: amountMsat,
+            ref_id: transactionId,
+            metadata: { approval_execution: true, error: 'wallet_failed' },
+          });
+        }, { behavior: 'immediate' });
+
+        return { status: 'FAILED' };
+      } catch (err) {
+        // Fail-closed: any unexpected error — write RELEASE + PAYMENT_FAILED and return FAILED
+        console.error('[paymentsService] executeApprovedPayment error', { agentId, transactionId, error: err });
+        try {
+          db.transaction((tx) => {
+            const tdb = tx as unknown as Db;
+
+            ledgerRepo.insert(tdb, {
+              agent_id: agentId,
+              amount_msat: amountMsat,
+              entry_type: 'RELEASE',
+              ref_id: transactionId,
+              mode: 'simulated',
+            });
+
+            auditRepo.insert(tdb, {
+              agent_id: agentId,
+              action: 'PAYMENT_FAILED',
+              amount_msat: amountMsat,
+              ref_id: transactionId,
+              metadata: { approval_execution: true, error: 'internal_error' },
+            });
+          }, { behavior: 'immediate' });
+        } catch (_innerErr) {
+          // Best-effort — ignore secondary failure
+        }
+        return { status: 'FAILED' };
+      }
+    },
+
     /**
      * Process a payment request for an agent.
      *

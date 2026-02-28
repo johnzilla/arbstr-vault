@@ -8,8 +8,10 @@ import { auditRepo } from '../../modules/audit/audit.repo.js';
 import { webhookService } from '../../modules/webhook/webhook.service.js';
 import { pendingApprovals } from '../../db/schema.js';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
+import type * as schema from '../../db/schema.js';
 
 type Db = BetterSQLite3Database<Record<string, never>>;
+type DB = BetterSQLite3Database<typeof schema>;
 
 export const adminApprovalsRoutes: FastifyPluginAsync = async (fastify) => {
   const app = fastify.withTypeProvider<ZodTypeProvider>();
@@ -32,7 +34,7 @@ export const adminApprovalsRoutes: FastifyPluginAsync = async (fastify) => {
             transaction_id: z.string(),
             agent_id: z.string(),
             amount_msat: z.number(),
-            payment_status: z.enum(['APPROVED']),
+            payment_status: z.enum(['SETTLED', 'FAILED']),
           }),
           404: z.object({
             error: z.object({ code: z.string(), message: z.string() }),
@@ -75,12 +77,22 @@ export const adminApprovalsRoutes: FastifyPluginAsync = async (fastify) => {
         });
       }, { behavior: 'immediate' });
 
-      // 4. Fire webhook non-blocking
+      // 4. Execute the wallet payment now that approval is granted
+      const executionResult = await app.paymentsService.executeApprovedPayment(
+        app.db as unknown as DB,
+        claimed.agent_id,
+        claimed.transaction_id,
+        claimed.amount_msat,
+        claimed.destination ?? null,
+      );
+
+      // 5. Fire webhook non-blocking (includes payment settlement status)
       webhookService.send({
         event: 'approval_granted',
         agent_id: claimed.agent_id,
         transaction_id: claimed.transaction_id,
         amount_msat: claimed.amount_msat,
+        payment_status: executionResult.status,
       }).catch(() => {});
 
       return reply.send({
@@ -89,7 +101,7 @@ export const adminApprovalsRoutes: FastifyPluginAsync = async (fastify) => {
         transaction_id: claimed.transaction_id,
         agent_id: claimed.agent_id,
         amount_msat: claimed.amount_msat,
-        payment_status: 'APPROVED' as const,
+        payment_status: executionResult.status,
       });
     },
   );
