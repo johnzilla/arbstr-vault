@@ -36,7 +36,7 @@ export const agentPaymentRoutes: FastifyPluginAsync = async (fastify) => {
             policy_decision: z.enum(['ALLOW', 'DENY', 'REQUIRE_HUMAN_APPROVAL']),
             reason: z.string().optional(),
             mode: z.string(),
-            status: z.enum(['SETTLED', 'PENDING', 'FAILED']),
+            status: z.enum(['SETTLED', 'PENDING', 'FAILED', 'PENDING_APPROVAL']),
             payment_hash: z.string().optional(),
             fee_msat: z.number().optional(),
             cashu_token_id: z.string().optional(),

@@ -13,7 +13,15 @@ type AuditAction =
   | 'DEPOSIT'
   | 'CASHU_MINT'
   | 'CASHU_MELT'
-  | 'CASHU_KEYSET_SWAP';
+  | 'CASHU_KEYSET_SWAP'
+  | 'APPROVAL_REQUESTED'
+  | 'APPROVAL_GRANTED'
+  | 'APPROVAL_DENIED'
+  | 'APPROVAL_TIMEOUT'
+  | 'WITHDRAWAL_REQUESTED'
+  | 'WITHDRAWAL_COMPLETED'
+  | 'WEBHOOK_DELIVERY_FAILED'
+  | 'BALANCE_ALERT';
 
 export interface AuditEntry {
   agent_id: string;

@@ -11,11 +11,13 @@ export interface PolicyDecision {
 
 /** Core limits evaluated by the policy engine.
  * The full policy version (from policy_versions table) includes additional fields
- * (approval_timeout_ms, alert_floor_msat, alert_cooldown_ms) not used by the engine.
+ * (alert_floor_msat, alert_cooldown_ms) not used by the engine.
  */
 export interface PolicyConfig {
   max_transaction_msat: number;
   daily_limit_msat: number;
+  /** If set and > 0, exceeds_max_transaction triggers REQUIRE_HUMAN_APPROVAL instead of DENY */
+  approval_timeout_ms?: number | null;
 }
 
 export interface PolicyContext {
@@ -50,6 +52,14 @@ export function evaluatePolicy(
 
     // Check 3: per-transaction amount limit
     if (ctx.request_amount_msat > policy.max_transaction_msat) {
+      // If approval_timeout_ms is configured, route to human approval instead of hard deny
+      if (policy.approval_timeout_ms && policy.approval_timeout_ms > 0) {
+        return {
+          outcome: 'REQUIRE_HUMAN_APPROVAL',
+          reason: 'exceeds_max_transaction_requires_approval',
+          rule_matched: 'max_transaction_msat',
+        };
+      }
       return {
         outcome: 'DENY',
         reason: 'exceeds_max_transaction',

@@ -3,6 +3,8 @@ import type * as schema from '../../db/schema.js';
 import { agentsRepo, policyVersionsRepo } from '../agents/agents.repo.js';
 import { ledgerRepo } from '../ledger/ledger.repo.js';
 import { auditRepo } from '../audit/audit.repo.js';
+import { approvalsRepo } from '../approvals/approvals.repo.js';
+import { webhookService } from '../webhook/webhook.service.js';
 import { evaluatePolicy, type PolicyOutcome } from '../policy/policy.engine.js';
 import { simulatedWallet } from './wallet/simulated.wallet.js';
 import type { WalletBackend } from './wallet/wallet.interface.js';
@@ -31,7 +33,7 @@ export interface PaymentResponse {
   policy_decision: PolicyOutcome;
   reason?: string;
   mode: string;
-  status: 'SETTLED' | 'PENDING' | 'FAILED';
+  status: 'SETTLED' | 'PENDING' | 'FAILED' | 'PENDING_APPROVAL';
   payment_hash?: string;
   fee_msat?: number;
   cashu_token_id?: string;
@@ -197,7 +199,7 @@ export function createPaymentsService(walletOrOptions: WalletBackend | PaymentsS
           // Uses requestTimestamp captured before the transaction for correct versioning.
           // Falls back to legacy policies table if no policy_versions rows exist (backward compat).
           const policyVersion = policyVersionsRepo.getVersionAt(
-            tx as unknown as Db,
+            tx as unknown as DB,
             agentId,
             requestTimestamp,
           );
@@ -255,6 +257,67 @@ export function createPaymentsService(walletOrOptions: WalletBackend | PaymentsS
             denyReason = decision.reason;
           }
         }, { behavior: 'immediate' });
+
+        // REQUIRE_HUMAN_APPROVAL path — intercept before generic DENY handling
+        // Write RESERVE + pending_approvals atomically, then return PENDING_APPROVAL
+        // NOTE: cast needed because TS control flow narrows denyOutcome to 'DENY' (callback assignment)
+        if (!walletShouldRun && (denyOutcome as PolicyOutcome) === 'REQUIRE_HUMAN_APPROVAL') {
+          const expiresAt = new Date(Date.now() + approvalTimeoutMs);
+          let approvalId = '';
+
+          db.transaction((tx) => {
+            const tdb = tx as unknown as Db;
+
+            // Write RESERVE to hold the funds during approval
+            ledgerRepo.insert(tdb, {
+              id: txId,
+              agent_id: agentId,
+              amount_msat: -request.amount_msat,
+              entry_type: 'RESERVE',
+              ref_id: txId,
+              mode: initialRail !== 'simulated' ? initialRail as 'lightning' | 'cashu' : 'simulated',
+            });
+
+            // Create pending_approvals row
+            const approval = approvalsRepo.create(tdb, {
+              agent_id: agentId,
+              type: 'payment',
+              transaction_id: txId,
+              amount_msat: request.amount_msat,
+              destination: request.destination,
+              expires_at: expiresAt,
+            });
+            approvalId = approval.id;
+
+            // Write APPROVAL_REQUESTED audit entry
+            auditRepo.insert(tdb, {
+              agent_id: agentId,
+              action: 'APPROVAL_REQUESTED',
+              policy_decision: 'REQUIRE_HUMAN_APPROVAL',
+              amount_msat: request.amount_msat,
+              ref_id: txId,
+              metadata: {
+                approval_id: approvalId,
+                expires_at: expiresAt.toISOString(),
+              },
+            });
+          }, { behavior: 'immediate' });
+
+          // Fire webhook — MUST NOT block
+          webhookService.send({
+            event: 'approval_required',
+            agent_id: agentId,
+            transaction_id: txId,
+            amount_msat: request.amount_msat,
+          }).catch(() => {});
+
+          return {
+            transaction_id: txId,
+            policy_decision: 'REQUIRE_HUMAN_APPROVAL',
+            mode: initialRail,
+            status: 'PENDING_APPROVAL',
+          };
+        }
 
         // DENY path — audit logged, no ledger entry, return early
         if (!walletShouldRun) {
