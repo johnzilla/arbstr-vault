@@ -62,6 +62,35 @@ export const ledgerEntries = sqliteTable('ledger_entries', {
     .notNull(),
 });
 
+export const policyVersions = sqliteTable('policy_versions', {
+  id: text('id').primaryKey().$defaultFn(() => `pv_${ulid()}`),
+  agent_id: text('agent_id').notNull().references(() => agents.id),
+  version: integer('version').notNull(),
+  max_transaction_msat: integer('max_transaction_msat').notNull().default(0),
+  daily_limit_msat: integer('daily_limit_msat').notNull().default(0),
+  max_fee_msat: integer('max_fee_msat').default(1000),
+  approval_timeout_ms: integer('approval_timeout_ms').default(300_000),
+  alert_floor_msat: integer('alert_floor_msat').default(0),
+  alert_cooldown_ms: integer('alert_cooldown_ms').default(3_600_000),
+  effective_from: integer('effective_from', { mode: 'timestamp_ms' }).notNull(),
+  created_at: integer('created_at', { mode: 'timestamp_ms' })
+    .$defaultFn(() => new Date()).notNull(),
+});
+
+export const pendingApprovals = sqliteTable('pending_approvals', {
+  id: text('id').primaryKey().$defaultFn(() => `apr_${ulid()}`),
+  agent_id: text('agent_id').notNull().references(() => agents.id),
+  type: text('type', { enum: ['payment', 'withdrawal'] }).notNull(),
+  transaction_id: text('transaction_id').notNull(),
+  amount_msat: integer('amount_msat').notNull(),
+  destination: text('destination'),
+  status: text('status', { enum: ['pending', 'approved', 'denied', 'timed_out'] }).notNull().default('pending'),
+  expires_at: integer('expires_at', { mode: 'timestamp_ms' }).notNull(),
+  resolved_at: integer('resolved_at', { mode: 'timestamp_ms' }),
+  created_at: integer('created_at', { mode: 'timestamp_ms' })
+    .$defaultFn(() => new Date()).notNull(),
+});
+
 export const auditLog = sqliteTable('audit_log', {
   id: text('id').primaryKey().$defaultFn(() => ulid()),
   agent_id: text('agent_id').notNull(),
@@ -76,6 +105,14 @@ export const auditLog = sqliteTable('audit_log', {
       'CASHU_MINT',
       'CASHU_MELT',
       'CASHU_KEYSET_SWAP',
+      'APPROVAL_REQUESTED',
+      'APPROVAL_GRANTED',
+      'APPROVAL_DENIED',
+      'APPROVAL_TIMEOUT',
+      'WITHDRAWAL_REQUESTED',
+      'WITHDRAWAL_COMPLETED',
+      'WEBHOOK_DELIVERY_FAILED',
+      'BALANCE_ALERT',
     ],
   }).notNull(),
   policy_decision: text('policy_decision', {

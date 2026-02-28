@@ -22,6 +22,13 @@
       "when": 1772236526264,
       "tag": "0002_easy_jetstream",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1772250757705,
+      "tag": "0003_watery_paibok",
+      "breakpoints": true
     }
   ]
 }

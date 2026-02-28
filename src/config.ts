@@ -15,6 +15,8 @@ const configSchema = z
     LND_MACAROON_BASE64: z.string().optional(),
     CASHU_MINT_URL: z.string().url().optional(),
     CASHU_THRESHOLD_MSAT: z.coerce.number().default(1_000_000),
+    OPERATOR_WEBHOOK_URL: z.string().url().optional(),
+    OPERATOR_WEBHOOK_SECRET: z.string().min(16).optional(),
   })
   .refine(
     (data) => {
