@@ -77,7 +77,12 @@ Plans:
   2. Operator can view all registered agents with their current balances, recent spend totals, daily utilization, and active policy state in a single API call
   3. Policy changes are versioned with effective-from timestamps; a payment request evaluated after a policy change uses the policy version that was active at the time of the request
   4. When an agent balance drops below a configured floor, the operator receives a notification — the threshold is per-agent and configurable via API
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 04-01-PLAN.md — Policy versioning schema, webhook service, and point-in-time payment evaluation
+- [ ] 04-02-PLAN.md — Approval queue, REQUIRE_HUMAN_APPROVAL activation, operator approve/deny routes, timeout checker
+- [ ] 04-03-PLAN.md — Withdrawal endpoint, balance alert notifications, and operator dashboard
 
 ## Progress
 
@@ -89,4 +94,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | 1. Foundation | 5/5 | Complete | 2026-02-26 |
 | 2. Lightning Backend | 3/3 | Complete   | 2026-02-27 |
 | 3. Cashu Backend | 3/3 | Complete   | 2026-02-28 |
-| 4. Operator Experience and Advanced Policy | 0/TBD | Not started | - |
+| 4. Operator Experience and Advanced Policy | 0/3 | Not started | - |
