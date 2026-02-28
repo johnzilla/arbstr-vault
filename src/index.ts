@@ -16,18 +16,31 @@ async function main() {
   // Run database migrations before starting the server
   migrate(db, { migrationsFolder: join(__dirname, 'db/migrations') });
 
-  // Select wallet backend based on WALLET_BACKEND config
+  // Select wallet backend based on WALLET_BACKEND config.
+  // Dynamic imports avoid loading unused packages when not configured.
   let wallet: WalletBackend | undefined;
+  let cashuWallet: WalletBackend | undefined;
 
   if (config.WALLET_BACKEND === 'lightning') {
     // Dynamically import to avoid importing lightning package when not needed
     const { initializeLightningBackend } = await import('./lib/lnd/lnd.startup.js');
     wallet = await initializeLightningBackend(db as unknown as Db);
+  } else if (config.WALLET_BACKEND === 'cashu') {
+    // Cashu-only mode: use Cashu ecash for all payments
+    const { initializeCashuBackend } = await import('./lib/cashu/cashu.startup.js');
+    cashuWallet = await initializeCashuBackend(db as unknown as Db);
+  } else if (config.WALLET_BACKEND === 'auto') {
+    // Dual-rail mode: initialize BOTH Lightning and Cashu backends.
+    // paymentsService will automatically route based on amount threshold.
+    const { initializeLightningBackend } = await import('./lib/lnd/lnd.startup.js');
+    const { initializeCashuBackend } = await import('./lib/cashu/cashu.startup.js');
+    wallet = await initializeLightningBackend(db as unknown as Db);
+    cashuWallet = await initializeCashuBackend(db as unknown as Db);
   }
-  // If WALLET_BACKEND === 'simulated', wallet remains undefined
-  // buildApp defaults to simulatedWallet when wallet is not provided
+  // If WALLET_BACKEND === 'simulated', both remain undefined.
+  // buildApp defaults to simulatedWallet when neither wallet is provided.
 
-  const app = buildApp({ db, wallet });
+  const app = buildApp({ db, wallet, cashuWallet });
 
   try {
     await app.listen({ port: config.PORT, host: '0.0.0.0' });

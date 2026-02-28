@@ -27,6 +27,8 @@ export interface BuildAppOptions {
   loggerStream?: DestinationStream;
   /** Optional wallet backend — defaults to simulatedWallet if not provided */
   wallet?: WalletBackend;
+  /** Optional Cashu wallet backend — used alongside wallet for dual-rail routing */
+  cashuWallet?: WalletBackend;
 }
 
 declare module 'fastify' {
@@ -60,26 +62,35 @@ export function buildApp(
   let db: DB | undefined;
   let loggerStream: DestinationStream | undefined;
   let wallet: WalletBackend | undefined;
+  let cashuWallet: WalletBackend | undefined;
 
   if (injectedDbOrOptions == null) {
     // buildApp() — no args
     db = undefined;
     loggerStream = options?.loggerStream;
     wallet = options?.wallet;
+    cashuWallet = options?.cashuWallet;
   } else if (
     typeof injectedDbOrOptions === 'object' &&
-    ('db' in injectedDbOrOptions || 'loggerStream' in injectedDbOrOptions || 'wallet' in injectedDbOrOptions)
+    (
+      'db' in injectedDbOrOptions ||
+      'loggerStream' in injectedDbOrOptions ||
+      'wallet' in injectedDbOrOptions ||
+      'cashuWallet' in injectedDbOrOptions
+    )
   ) {
-    // buildApp({ db?, loggerStream?, wallet? }) — options object
+    // buildApp({ db?, loggerStream?, wallet?, cashuWallet? }) — options object
     const opts = injectedDbOrOptions as BuildAppOptions;
     db = opts.db;
     loggerStream = opts.loggerStream;
     wallet = opts.wallet;
+    cashuWallet = opts.cashuWallet;
   } else {
     // buildApp(db) — legacy: first arg is a DB instance
     db = injectedDbOrOptions as DB;
     loggerStream = options?.loggerStream;
     wallet = options?.wallet;
+    cashuWallet = options?.cashuWallet;
   }
 
   const app = Fastify({
@@ -92,9 +103,19 @@ export function buildApp(
   // Register db as a decorator so routes and middleware can access it
   app.decorate('db', db ?? defaultDb);
 
-  // Register paymentsService as a decorator bound to the selected wallet backend
-  // Routes use app.paymentsService instead of importing paymentsService directly
-  app.decorate('paymentsService', createPaymentsService(wallet ?? simulatedWallet));
+  // Register paymentsService as a decorator bound to the selected wallet backend.
+  // Routes use app.paymentsService instead of importing paymentsService directly.
+  // When cashuWallet is provided, create a dual-wallet service for automatic routing.
+  // Otherwise, fall back to the single-wallet backward-compat mode.
+  if (cashuWallet) {
+    app.decorate('paymentsService', createPaymentsService({
+      simulatedWallet,
+      lightningWallet: wallet !== simulatedWallet ? wallet : undefined,
+      cashuWallet,
+    }));
+  } else {
+    app.decorate('paymentsService', createPaymentsService(wallet ?? simulatedWallet));
+  }
 
   // Health check
   app.get('/health', async (_request, _reply) => {
