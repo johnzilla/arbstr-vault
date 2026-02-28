@@ -425,11 +425,16 @@ export function createPaymentsService(walletOrOptions: WalletBackend | PaymentsS
             }, { behavior: 'immediate' });
           } else if (selectedRail === 'cashu') {
             // Cashu SETTLED: debit + audit atomically
+            //
+            // When Cashu is the primary rail: use id=txId (the canonical ledger entry for this tx).
+            // When Cashu is a fallback after Lightning: txId is already taken by the RESERVE entry;
+            //   use ref_id only (let ledger auto-generate a new id) for the PAYMENT debit.
+            const isCashuFallback = fallbackOccurred && initialRail === 'lightning';
             db.transaction((tx) => {
               const tdb = tx as unknown as Db;
 
               ledgerRepo.insert(tdb, {
-                id: txId,
+                ...(isCashuFallback ? {} : { id: txId }),
                 agent_id: agentId,
                 amount_msat: -request.amount_msat,
                 entry_type: 'PAYMENT',
