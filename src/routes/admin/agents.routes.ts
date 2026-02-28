@@ -141,7 +141,71 @@ export const adminAgentRoutes: FastifyPluginAsync = async (fastify) => {
     },
   );
 
-  // PUT /agents/:id/policy — update agent policy
+  // PATCH /operator/agents/:id/policy — update agent policy (versioned, Phase 4+)
+  app.patch(
+    '/operator/agents/:id/policy',
+    {
+      schema: {
+        params: z.object({
+          id: z.string().startsWith('ag_'),
+        }),
+        body: z.object({
+          max_transaction_msat: z.number().int().nonnegative(),
+          daily_limit_msat: z.number().int().nonnegative(),
+          max_fee_msat: z.number().int().nonnegative().optional(),
+          approval_timeout_ms: z.number().int().min(30_000).max(3_600_000).optional(),
+          alert_floor_msat: z.number().int().nonnegative().optional(),
+          alert_cooldown_ms: z.number().int().min(60_000).optional(),
+        }),
+        response: {
+          200: z.object({
+            agent_id: z.string(),
+            policy: z.object({
+              version: z.number(),
+              max_transaction_msat: z.number(),
+              daily_limit_msat: z.number(),
+              max_fee_msat: z.number().nullable(),
+              approval_timeout_ms: z.number().nullable(),
+              alert_floor_msat: z.number().nullable(),
+              alert_cooldown_ms: z.number().nullable(),
+              effective_from: z.date(),
+            }),
+          }),
+          404: z.object({
+            error: z.object({ code: z.string(), message: z.string() }),
+          }),
+        },
+      },
+    },
+    async (request, reply) => {
+      try {
+        const newVersion = agentsService.updatePolicy(app.db, request.params.id, request.body);
+        return reply.send({
+          agent_id: request.params.id,
+          policy: {
+            version: newVersion.version,
+            max_transaction_msat: newVersion.max_transaction_msat,
+            daily_limit_msat: newVersion.daily_limit_msat,
+            max_fee_msat: newVersion.max_fee_msat ?? null,
+            approval_timeout_ms: newVersion.approval_timeout_ms ?? null,
+            alert_floor_msat: newVersion.alert_floor_msat ?? null,
+            alert_cooldown_ms: newVersion.alert_cooldown_ms ?? null,
+            effective_from: newVersion.effective_from,
+          },
+        });
+      } catch (err) {
+        const e = err as Error & { statusCode?: number };
+        if (e.statusCode === 404) {
+          return reply.status(404).send({
+            error: { code: 'not_found', message: 'Agent not found' },
+          });
+        }
+        throw err;
+      }
+    },
+  );
+
+  // PUT /agents/:id/policy — legacy endpoint for backward compatibility
   app.put(
     '/agents/:id/policy',
     {
@@ -170,13 +234,13 @@ export const adminAgentRoutes: FastifyPluginAsync = async (fastify) => {
     },
     async (request, reply) => {
       try {
-        const updated = agentsService.updatePolicy(app.db, request.params.id, request.body);
+        const newVersion = agentsService.updatePolicy(app.db, request.params.id, request.body);
         return reply.send({
           agent_id: request.params.id,
           policy: {
-            max_transaction_msat: updated!.max_transaction_msat,
-            daily_limit_msat: updated!.daily_limit_msat,
-            updated_at: updated!.updated_at,
+            max_transaction_msat: newVersion.max_transaction_msat,
+            daily_limit_msat: newVersion.daily_limit_msat,
+            updated_at: newVersion.created_at,
           },
         });
       } catch (err) {

@@ -1,5 +1,5 @@
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
-import { agentsRepo } from './agents.repo.js';
+import { agentsRepo, policyVersionsRepo } from './agents.repo.js';
 import { generateToken, hashToken } from '../tokens/tokens.service.js';
 import { generateAgentId, generatePolicyId } from '../../types.js';
 import { policies, auditLog, ledgerEntries } from '../../db/schema.js';
@@ -39,7 +39,7 @@ export const agentsService = {
       metadata: params.metadata,
     });
 
-    // Insert default deny-all policy
+    // Insert default deny-all policy (legacy table — kept for backward compat)
     db.insert(policies)
       .values({
         id: generatePolicyId(),
@@ -48,6 +48,15 @@ export const agentsService = {
         daily_limit_msat: 0,
       })
       .run();
+
+    // Insert version 1 policy into policy_versions (deny-all defaults)
+    policyVersionsRepo.insertVersion(db, {
+      agent_id: agentId,
+      version: 1,
+      effective_from: new Date(),
+      max_transaction_msat: 0,
+      daily_limit_msat: 0,
+    });
 
     // Insert AGENT_REGISTERED audit log entry
     db.insert(auditLog)
@@ -93,12 +102,20 @@ export const agentsService = {
   },
 
   /**
-   * Update policy for an agent — inserts POLICY_UPDATED audit log entry
+   * Update policy for an agent — appends a new version to policy_versions (never mutates).
+   * Returns the new version row.
    */
   updatePolicy(
     db: DB,
     agentId: string,
-    policy: { max_transaction_msat: number; daily_limit_msat: number },
+    policy: {
+      max_transaction_msat: number;
+      daily_limit_msat: number;
+      max_fee_msat?: number;
+      approval_timeout_ms?: number;
+      alert_floor_msat?: number;
+      alert_cooldown_ms?: number;
+    },
   ) {
     // Verify agent exists
     const agent = agentsRepo.findById(db, agentId);
@@ -108,33 +125,47 @@ export const agentsService = {
       throw err;
     }
 
-    const now = new Date();
+    // Get next version number
+    const current = policyVersionsRepo.getCurrent(db, agentId);
+    const nextVersion = (current?.version ?? 0) + 1;
 
-    // Update the policy
-    const updated = db
-      .update(policies)
-      .set({
+    let newVersion: ReturnType<typeof policyVersionsRepo.insertVersion>;
+
+    db.transaction((tx) => {
+      const tdb = tx as unknown as DB;
+
+      // Insert new policy_versions row (append-only — never update or delete)
+      newVersion = policyVersionsRepo.insertVersion(tdb, {
+        agent_id: agentId,
+        version: nextVersion,
+        effective_from: new Date(),
         max_transaction_msat: policy.max_transaction_msat,
         daily_limit_msat: policy.daily_limit_msat,
-        updated_at: now,
-      })
-      .where(eq(policies.agent_id, agentId))
-      .returning()
-      .get();
+        max_fee_msat: policy.max_fee_msat,
+        approval_timeout_ms: policy.approval_timeout_ms,
+        alert_floor_msat: policy.alert_floor_msat,
+        alert_cooldown_ms: policy.alert_cooldown_ms,
+      });
 
-    // Insert POLICY_UPDATED audit log entry
-    db.insert(auditLog)
-      .values({
-        id: ulid(),
-        agent_id: agentId,
-        action: 'POLICY_UPDATED',
-        metadata: {
-          max_transaction_msat: String(policy.max_transaction_msat),
-          daily_limit_msat: String(policy.daily_limit_msat),
-        },
-      })
-      .run();
+      // Insert POLICY_UPDATED audit log entry
+      db.insert(auditLog)
+        .values({
+          id: ulid(),
+          agent_id: agentId,
+          action: 'POLICY_UPDATED',
+          metadata: {
+            version: nextVersion,
+            max_transaction_msat: String(policy.max_transaction_msat),
+            daily_limit_msat: String(policy.daily_limit_msat),
+            ...(policy.max_fee_msat !== undefined && { max_fee_msat: String(policy.max_fee_msat) }),
+            ...(policy.approval_timeout_ms !== undefined && { approval_timeout_ms: String(policy.approval_timeout_ms) }),
+            ...(policy.alert_floor_msat !== undefined && { alert_floor_msat: String(policy.alert_floor_msat) }),
+            ...(policy.alert_cooldown_ms !== undefined && { alert_cooldown_ms: String(policy.alert_cooldown_ms) }),
+          },
+        })
+        .run();
+    }, { behavior: 'immediate' });
 
-    return updated;
+    return newVersion!;
   },
 };

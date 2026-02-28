@@ -9,6 +9,10 @@ export interface PolicyDecision {
   rule_matched?: string;
 }
 
+/** Core limits evaluated by the policy engine.
+ * The full policy version (from policy_versions table) includes additional fields
+ * (approval_timeout_ms, alert_floor_msat, alert_cooldown_ms) not used by the engine.
+ */
 export interface PolicyConfig {
   max_transaction_msat: number;
   daily_limit_msat: number;

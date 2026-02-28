@@ -1,6 +1,6 @@
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type * as schema from '../../db/schema.js';
-import { agentsRepo } from '../agents/agents.repo.js';
+import { agentsRepo, policyVersionsRepo } from '../agents/agents.repo.js';
 import { ledgerRepo } from '../ledger/ledger.repo.js';
 import { auditRepo } from '../audit/audit.repo.js';
 import { evaluatePolicy, type PolicyOutcome } from '../policy/policy.engine.js';
@@ -157,6 +157,8 @@ export function createPaymentsService(walletOrOptions: WalletBackend | PaymentsS
      */
     async processPayment(db: DB, agentId: string, request: PaymentRequest): Promise<PaymentResponse> {
       const txId = generateTransactionId();
+      // Capture timestamp BEFORE Phase 1 transaction for point-in-time policy lookup (PLCY-09)
+      const requestTimestamp = Date.now();
 
       try {
         // ---------------------------------------------------------------
@@ -167,6 +169,7 @@ export function createPaymentsService(walletOrOptions: WalletBackend | PaymentsS
         let denyOutcome: PolicyOutcome = 'DENY';
         let denyReason = '';
         let policyMaxFeeMsat = 1000; // default: 1 sat
+        let approvalTimeoutMs = 300_000; // default: 5 minutes
 
         const hasLightning = !!options.lightningWallet;
         const hasCashu = !!options.cashuWallet;
@@ -184,22 +187,44 @@ export function createPaymentsService(walletOrOptions: WalletBackend | PaymentsS
         db.transaction((tx) => {
           const tdb = tx as unknown as Db;
 
-          // Read state inside transaction for consistency (prevents TOCTOU)
-          const agent = agentsRepo.getWithPolicy(tx as unknown as DB, agentId);
+          // Read agent (without policy join — policy comes from point-in-time lookup below)
+          const agent = agentsRepo.findById(tx as unknown as DB, agentId);
           if (!agent) {
             throw new Error(`Agent not found: ${agentId}`);
+          }
+
+          // Point-in-time policy version lookup (PLCY-09)
+          // Uses requestTimestamp captured before the transaction for correct versioning.
+          // Falls back to legacy policies table if no policy_versions rows exist (backward compat).
+          const policyVersion = policyVersionsRepo.getVersionAt(
+            tx as unknown as Db,
+            agentId,
+            requestTimestamp,
+          );
+
+          // Resolve the effective policy config for evaluation.
+          // policyVersion takes precedence; legacy agentsRepo.getWithPolicy fallback for existing tests
+          // that only insert into the policies table (not policy_versions).
+          let effectivePolicy: { max_transaction_msat: number; daily_limit_msat: number; max_fee_msat?: number | null; approval_timeout_ms?: number | null } | null = policyVersion;
+          if (!effectivePolicy) {
+            const agentWithPolicy = agentsRepo.getWithPolicy(tx as unknown as DB, agentId);
+            effectivePolicy = agentWithPolicy?.policy ?? null;
           }
 
           const balance = ledgerRepo.getBalance(tdb, agentId);
           const dailySpend = ledgerRepo.getDailySpend(tdb, agentId);
 
-          // Capture max_fee_msat from policy for Lightning routing fee limit (default: 1 sat)
-          if (agent.policy?.max_fee_msat != null) {
-            policyMaxFeeMsat = agent.policy.max_fee_msat;
+          // Capture max_fee_msat from effective policy for Lightning routing fee limit (default: 1 sat)
+          if (effectivePolicy?.max_fee_msat != null) {
+            policyMaxFeeMsat = effectivePolicy.max_fee_msat;
           }
 
+          // Capture approval_timeout_ms for REQUIRE_HUMAN_APPROVAL path (Plan 02 will use it)
+          approvalTimeoutMs = policyVersion?.approval_timeout_ms ?? 300_000;
+
           // Evaluate policy (fail-closed — evaluatePolicy never throws)
-          const decision = evaluatePolicy(agent.policy, {
+          // effectivePolicy has max_transaction_msat and daily_limit_msat — structurally compatible with PolicyConfig
+          const decision = evaluatePolicy(effectivePolicy, {
             balance_msat: balance,
             daily_spent_msat: dailySpend,
             request_amount_msat: request.amount_msat,
