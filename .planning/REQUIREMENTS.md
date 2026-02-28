@@ -32,8 +32,8 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **PLCY-03**: Per-agent configurable daily spend limit (resets on 24h window)
 - [x] **PLCY-04**: Policy engine returns ALLOW, DENY, or REQUIRE_HUMAN_APPROVAL for each request
 - [x] **PLCY-05**: Policy engine defaults to DENY on any internal error (fail-closed)
-- [ ] **PLCY-06**: Over-limit transactions route to pending state with operator notification
-- [ ] **PLCY-07**: Pending approvals time out to DENY after configurable interval
+- [x] **PLCY-06**: Over-limit transactions route to pending state with operator notification
+- [x] **PLCY-07**: Pending approvals time out to DENY after configurable interval
 - [x] **PLCY-08**: Policy changes are versioned with effective-from timestamps
 - [x] **PLCY-09**: Policy evaluation uses the version active at payment request time
 
@@ -115,8 +115,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PLCY-03 | Phase 1 | Complete |
 | PLCY-04 | Phase 1 | Complete |
 | PLCY-05 | Phase 1 | Complete |
-| PLCY-06 | Phase 4 | Pending |
-| PLCY-07 | Phase 4 | Pending |
+| PLCY-06 | Phase 4 | Complete |
+| PLCY-07 | Phase 4 | Complete |
 | PLCY-08 | Phase 4 | Complete |
 | PLCY-09 | Phase 4 | Complete |
 | OBSV-01 | Phase 1 | Complete |

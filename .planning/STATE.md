@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: in_progress
-last_updated: "2026-02-28T03:59:08Z"
+status: unknown
+last_updated: "2026-02-28T04:16:35.150Z"
 progress:
   total_phases: 4
   completed_phases: 3
   total_plans: 14
-  completed_plans: 12
+  completed_plans: 13
 ---
 
 # Project State
@@ -23,11 +23,11 @@ See: .planning/PROJECT.md (updated 2026-02-26)
 ## Current Position
 
 Phase: 4 of 4 (Operator Experience and Advanced Policy)
-Plan: 1 of 3 in current phase — COMPLETE
-Status: 04-01 complete — Append-only policy versioning, point-in-time evaluation, webhook service, PATCH route.
-Last activity: 2026-02-28 — Completed 04-01: policy_versions table, webhookService, policyVersionsRepo, 5 tests
+Plan: 2 of 3 in current phase — COMPLETE
+Status: 04-02 complete — Approval lifecycle: approvalsRepo, approvalsService, operator approve/deny routes, PENDING_APPROVAL status, timeout checker.
+Last activity: 2026-02-28 — Completed 04-02: approvalsRepo, approvalsService, 7 tests, REQUIRE_HUMAN_APPROVAL activated
 
-Progress: [████████████░░░] ~85% (Phase 4 Plan 1 of 3 done)
+Progress: [█████████████░░] ~90% (Phase 4 Plan 2 of 3 done)
 
 ## Performance Metrics
 
@@ -43,7 +43,7 @@ Progress: [████████████░░░] ~85% (Phase 4 Plan 1 o
 | 01-foundation | 5 | ~21 min | ~4.2 min |
 | 02-lightning-backend | 3 | ~13 min | ~4.3 min |
 | 03-cashu-backend | 3 | ~15 min | ~5 min |
-| 04-operator-experience | 1 done | ~8 min | ~8 min |
+| 04-operator-experience | 2 done | ~20 min | ~10 min |
 
 **Recent Trend:**
 - Last 8 plans: 01-04 (4 min), 01-05 (6 min), 02-01 (3 min), 02-02 (5 min), 02-03 (5 min), 03-01 (5 min), 03-02 (5 min), 04-01 (8 min)
@@ -52,6 +52,7 @@ Progress: [████████████░░░] ~85% (Phase 4 Plan 1 o
 *Updated after each plan completion*
 | Phase 03 P03 | 5 | 2 tasks | 4 files |
 | Phase 04 P01 | 8 | 2 tasks | 9 files |
+| Phase 04 P02 | 12 | 2 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -104,6 +105,11 @@ Recent decisions affecting current work:
 - [Phase 04-01]: processPayment falls back to agentsRepo.getWithPolicy (legacy policies table) when getVersionAt returns null — ensures test fixtures that only insert policies rows continue to pass
 - [Phase 04-01]: pendingApprovals table schema added in migration 0003 alongside policy_versions — Plan 02 will wire repo and service; schema-only for now
 - [Phase 04-01]: webhookService.send is fire-and-forget; callers use .catch(() => {}) to avoid blocking payment flow
+- [Phase 04-02]: REQUIRE_HUMAN_APPROVAL activated only when approval_timeout_ms > 0; null = DENY (fail-closed)
+- [Phase 04-02]: Atomic RESERVE + pending_approvals in single IMMEDIATE transaction prevents crash-split state
+- [Phase 04-02]: CAS claimForResolution prevents double-resolve race between concurrent approve/deny/timeout
+- [Phase 04-02]: expireTimedOut runs in index.ts setInterval (not buildApp) — keeps tests unaffected by timer
+- [Phase 04-02]: policyVersionsRepo.insertVersion uses null (not undefined) for optional fields — prevents SQLite DEFAULT(300_000) silently enabling approval on all policies
 
 ### Pending Todos
 
@@ -117,6 +123,6 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-28
-Stopped at: Completed 04-01-PLAN.md — Append-only policy versioning, point-in-time evaluation, webhook service, PATCH route.
-Resume file: .planning/phases/04-operator-experience-and-advanced-policy/04-02-PLAN.md
+Stopped at: Completed 04-02-PLAN.md — Approval lifecycle: approvalsRepo, approvalsService, operator approve/deny routes, PENDING_APPROVAL status, timeout checker, 7 tests.
+Resume file: .planning/phases/04-operator-experience-and-advanced-policy/04-03-PLAN.md
 Resume command: /gsd:execute-phase 4
