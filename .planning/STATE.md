@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-02-28T00:01:03.412Z"
+last_updated: "2026-02-28T00:18:13.442Z"
 progress:
   total_phases: 3
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 11
-  completed_plans: 10
+  completed_plans: 11
 ---
 
 # Project State
@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** Agents can request and execute payments within explicit policy limits, with all keys and connections centralized in the Treasury Service — never in the agents themselves
-**Current focus:** Phase 3 — Cashu Backend (phase 2 complete)
+**Current focus:** Phase 4 — Agent UX (phase 3 complete)
 
 ## Current Position
 
-Phase: 3 of 4 (Cashu Backend) — IN PROGRESS
-Plan: 2 of 3 in current phase — COMPLETE
-Status: 03-02 complete — Dual-rail routing, selectRail(), fallback logic, Cashu startup with crash recovery and keyset rotation done. Plan 03 (pool funding) next.
-Last activity: 2026-02-28 — Completed 03-02: Payment routing layer and Cashu startup
+Phase: 3 of 4 (Cashu Backend) — COMPLETE
+Plan: 3 of 3 in current phase — COMPLETE
+Status: 03-03 complete — Integration tests (14 tests), Docker Nutshell mint, payment status routing trace. Phase 3 complete.
+Last activity: 2026-02-28 — Completed 03-03: Cashu integration tests, Docker Nutshell, payment status routing trace
 
-Progress: [██████████░] ~62%
+Progress: [████████████] ~100% (Phase 3 of 3 done)
 
 ## Performance Metrics
 
@@ -42,13 +42,14 @@ Progress: [██████████░] ~62%
 |-------|-------|-------|----------|
 | 01-foundation | 5 | ~21 min | ~4.2 min |
 | 02-lightning-backend | 3 | ~13 min | ~4.3 min |
-| 03-cashu-backend | 2 | ~10 min | ~5 min |
+| 03-cashu-backend | 3 | ~15 min | ~5 min |
 
 **Recent Trend:**
 - Last 7 plans: 01-04 (4 min), 01-05 (6 min), 02-01 (3 min), 02-02 (5 min), 02-03 (5 min), 03-01 (5 min), 03-02 (5 min)
 - Trend: Stable at ~4-5 min/plan
 
 *Updated after each plan completion*
+| Phase 03 P03 | 5 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -95,6 +96,8 @@ Recent decisions affecting current work:
 - [Phase 03-cashu-backend]: createPaymentsService backward compat: single non-simulatedWallet arg treated as lightningWallet (not simulatedWallet) to preserve RESERVE/RELEASE semantic from pre-refactor tests
 - [Phase 03-cashu-backend]: selectRail() not exported; preferred_rail agent hint overrides threshold routing; fallback adjusts RESERVE/RELEASE correctly per direction (Lightning->Cashu vs Cashu->Lightning)
 - [Phase 03-cashu-backend]: CashuClient.getKeysets() is synchronous; crash recovery uses checkMeltQuote per PENDING op; keyset rotation writes CASHU_KEYSET_SWAP audit with agent_id='system'
+- [Phase 03]: Cashu PAYMENT ledger entry omits explicit id=txId when fallback after Lightning RESERVE — prevents UNIQUE constraint violation
+- [Phase 03]: Payment status routing trace prefers PAYMENT_SETTLED metadata; falls back to PAYMENT_REQUEST metadata for initial_rail
 
 ### Pending Todos
 
@@ -108,6 +111,6 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-28
-Stopped at: Completed 03-02-PLAN.md — Dual-rail routing, Cashu startup with crash recovery and keyset rotation. Plan 03-03 (pool funding) next.
-Resume file: .planning/phases/03-cashu-backend/03-03-PLAN.md
-Resume command: /gsd:execute-phase 3
+Stopped at: Completed 03-03-PLAN.md — Integration tests, Docker Nutshell, payment status routing trace. Phase 3 complete.
+Resume file: .planning/phases/04-agent-ux/ (next phase)
+Resume command: /gsd:execute-phase 4

@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Foundation** - Data model, auth, policy engine, audit log, and simulated wallet — the entire API contract with no real funds
 - [x] **Phase 2: Lightning Backend** - Real BOLT11 payment execution via LND with correct payment state machine (completed 2026-02-27)
-- [ ] **Phase 3: Cashu Backend** - Self-hosted Nutshell mint as hot wallet plus automatic payment rail routing
+- [x] **Phase 3: Cashu Backend** - Self-hosted Nutshell mint as hot wallet plus automatic payment rail routing (completed 2026-02-28)
 - [ ] **Phase 4: Operator Experience and Advanced Policy** - Human approval workflow, remaining policy primitives, versioning, and operator endpoints
 
 ## Phase Details
@@ -88,5 +88,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 |-------|----------------|--------|-----------|
 | 1. Foundation | 5/5 | Complete | 2026-02-26 |
 | 2. Lightning Backend | 3/3 | Complete   | 2026-02-27 |
-| 3. Cashu Backend | 2/3 | In Progress|  |
+| 3. Cashu Backend | 3/3 | Complete   | 2026-02-28 |
 | 4. Operator Experience and Advanced Policy | 0/TBD | Not started | - |
