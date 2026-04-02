@@ -33,7 +33,14 @@ Agents can request and execute payments within explicit policy limits, with all 
 
 ### Active
 
-<!-- Next milestone scope -->
+<!-- v1.1 scope: Internal Billing API -->
+
+- [ ] Internal reserve/settle/release billing routes for arbstr core (BILL-01)
+- [ ] Internal auth middleware with shared secret token (BILL-02)
+- [ ] Partial settlement via RELEASE+PAYMENT ledger pattern (BILL-03)
+- [ ] Idempotent settle and release operations (BILL-04)
+
+### Future
 
 - [ ] Per-agent max balance limit (PLCY-10)
 - [ ] Per-agent daily loss limit with net position tracking (PLCY-11)
@@ -56,6 +63,17 @@ Agents can request and execute payments within explicit policy limits, with all 
 - On-chain Bitcoin custody — Lightning + Cashu sufficient
 - CEX connectors — belongs in dedicated service, not treasury
 - Sophisticated risk models — basic rules/limits sufficient for current scope
+
+## Current Milestone: v1.1 Internal Billing API
+
+**Goal:** Add three `/internal/*` routes (reserve/settle/release) that arbstr core calls for per-request billing, with partial settlement support via RELEASE+PAYMENT ledger pattern.
+
+**Target features:**
+- `POST /internal/reserve` — hold funds against agent balance before LLM call
+- `POST /internal/settle` — partial settlement (RELEASE full reserve + PAYMENT actual cost)
+- `POST /internal/release` — cancel reservation and restore balance
+- Internal auth middleware (`X-Internal-Token`, env var comparison)
+- Idempotent settle and release (safe to retry)
 
 ## Context
 
@@ -88,6 +106,25 @@ Agents can request and execute payments within explicit policy limits, with all 
 | RESERVE/RELEASE/PAYMENT ledger pattern | Atomic holds during async wallet calls prevent TOCTOU races | ✓ Good — crash-safe |
 | Append-only policy versions | Point-in-time evaluation prevents retroactive policy changes | ✓ Good — clean audit trail |
 | Webhook for operator notifications | Fire-and-forget with HMAC-SHA256 + retry; never blocks payment | ✓ Good — decoupled |
+| Partial settlement via RELEASE+PAYMENT | Keeps ledger append-only; no entry modification needed | — Pending |
+| Internal auth via shared secret (not agent tokens) | Service-to-service trust; simpler than agent auth for internal calls | — Pending |
+
+## Evolution
+
+This document evolves at phase transitions and milestone boundaries.
+
+**After each phase transition** (via `/gsd:transition`):
+1. Requirements invalidated? → Move to Out of Scope with reason
+2. Requirements validated? → Move to Validated with phase reference
+3. New requirements emerged? → Add to Active
+4. Decisions to log? → Add to Key Decisions
+5. "What This Is" still accurate? → Update if drifted
+
+**After each milestone** (via `/gsd:complete-milestone`):
+1. Full review of all sections
+2. Core Value check — still the right priority?
+3. Audit Out of Scope — reasons still valid?
+4. Update Context with current state
 
 ---
-*Last updated: 2026-02-28 after v1.0 milestone*
+*Last updated: 2026-04-02 after v1.1 milestone started*

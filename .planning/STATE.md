@@ -1,29 +1,31 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: MVP
-status: complete
-last_updated: "2026-02-28"
+milestone: v1.1
+milestone_name: Internal Billing API
+status: active
+last_updated: "2026-04-02"
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 15
-  completed_plans: 15
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-28)
+See: .planning/PROJECT.md (updated 2026-04-02)
 
 **Core value:** Agents can request and execute payments within explicit policy limits, with all keys and connections centralized in the Treasury Service — never in the agents themselves
-**Current focus:** v1.0 milestone complete — planning next milestone
+**Current focus:** v1.1 Internal Billing API — reserve/settle/release routes for arbstr core
 
 ## Current Position
 
-Milestone: v1.0 MVP — SHIPPED 2026-02-28
-All 4 phases, 15 plans complete. 113 tests passing. 9,617 LOC TypeScript.
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-04-02 — Milestone v1.1 started
 
 ## Accumulated Context
 
@@ -37,10 +39,10 @@ None.
 
 ### Blockers/Concerns
 
-None — v1.0 complete.
+None.
 
 ## Session Continuity
 
-Last session: 2026-02-28
-Stopped at: v1.0 milestone complete. All phases shipped.
-Resume command: /gsd:new-milestone
+Last session: 2026-04-02
+Stopped at: Defining requirements for v1.1
+Resume command: /gsd:progress
