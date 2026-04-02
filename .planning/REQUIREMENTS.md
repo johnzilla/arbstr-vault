@@ -69,24 +69,24 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| IAUTH-01 | — | Pending |
-| IAUTH-02 | — | Pending |
-| BILL-01 | — | Pending |
-| BILL-02 | — | Pending |
-| BILL-03 | — | Pending |
-| BILL-04 | — | Pending |
-| BILL-05 | — | Pending |
-| BILL-06 | — | Pending |
-| BILL-07 | — | Pending |
-| BILL-08 | — | Pending |
-| BILL-09 | — | Pending |
-| BILL-10 | — | Pending |
+| IAUTH-01 | Phase 5 | Pending |
+| IAUTH-02 | Phase 5 | Pending |
+| BILL-01 | Phase 5 | Pending |
+| BILL-02 | Phase 5 | Pending |
+| BILL-03 | Phase 5 | Pending |
+| BILL-04 | Phase 5 | Pending |
+| BILL-05 | Phase 6 | Pending |
+| BILL-06 | Phase 6 | Pending |
+| BILL-07 | Phase 6 | Pending |
+| BILL-08 | Phase 6 | Pending |
+| BILL-09 | Phase 6 | Pending |
+| BILL-10 | Phase 6 | Pending |
 
 **Coverage:**
 - v1.1 requirements: 12 total
-- Mapped to phases: 0
-- Unmapped: 12 ⚠️
+- Mapped to phases: 12
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-02*
-*Last updated: 2026-04-02 after initial definition*
+*Last updated: 2026-04-02 after roadmap creation*
