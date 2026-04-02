@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Internal Billing API
-status: planning
-stopped_at: Phase 5 context gathered
-last_updated: "2026-04-02T21:02:07.553Z"
-last_activity: 2026-04-02 -- Roadmap created for v1.1 Internal Billing API
+status: executing
+stopped_at: Completed 05-01-PLAN.md — internalAuth middleware and config
+last_updated: "2026-04-02T22:18:21.771Z"
+last_activity: 2026-04-02
 progress:
   total_phases: 2
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 2
+  completed_plans: 1
   percent: 67
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-02)
 
 **Core value:** Agents can request and execute payments within explicit policy limits, with all keys and connections centralized in the Treasury Service
-**Current focus:** Phase 5 - Internal Auth and Reserve
+**Current focus:** Phase 05 — internal-auth-and-reserve
 
 ## Current Position
 
-Phase: 5 of 6 (Internal Auth and Reserve)
-Plan: 0 of ? in current phase
-Status: Ready to plan
-Last activity: 2026-04-02 -- Roadmap created for v1.1 Internal Billing API
+Phase: 05 (internal-auth-and-reserve) — EXECUTING
+Plan: 2 of 2
+Status: Ready to execute
+Last activity: 2026-04-02
 
 Progress: [██████████████░░░░░░] 67% (v1.0 complete, v1.1 starting)
 
@@ -55,6 +55,7 @@ Progress: [██████████████░░░░░░] 67% (v1
 - Trend: Stable
 
 *Updated after each plan completion*
+| Phase 05-internal-auth-and-reserve P01 | 8 | 1 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -66,6 +67,8 @@ Recent decisions affecting current work:
 - Partial settlement via RELEASE+PAYMENT: Keeps ledger append-only; no entry modification needed
 - Internal auth via shared secret: Service-to-service trust; simpler than agent auth for internal calls
 - All billing uses mode: 'simulated': No real wallet calls from billing routes
+- [Phase 05-01]: VAULT_INTERNAL_TOKEN is optional in config so service starts normally without it; internal routes return 401 when unconfigured (fail-closed)
+- [Phase 05-01]: Uses X-Internal-Token header (not Authorization/Bearer) to distinguish from agent/admin auth
 
 ### Pending Todos
 
@@ -77,6 +80,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-02T21:02:07.550Z
-Stopped at: Phase 5 context gathered
-Resume file: .planning/phases/05-internal-auth-and-reserve/05-CONTEXT.md
+Last session: 2026-04-02T22:18:21.768Z
+Stopped at: Completed 05-01-PLAN.md — internalAuth middleware and config
+Resume file: None

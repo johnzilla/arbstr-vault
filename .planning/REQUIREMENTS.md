@@ -9,8 +9,8 @@ Requirements for Internal Billing API. Each maps to roadmap phases.
 
 ### Internal Auth
 
-- [ ] **IAUTH-01**: Service-to-service requests authenticated via `X-Internal-Token` header matched against `VAULT_INTERNAL_TOKEN` env var
-- [ ] **IAUTH-02**: Missing or invalid internal token returns 401
+- [x] **IAUTH-01**: Service-to-service requests authenticated via `X-Internal-Token` header matched against `VAULT_INTERNAL_TOKEN` env var
+- [x] **IAUTH-02**: Missing or invalid internal token returns 401
 
 ### Billing — Reserve
 
@@ -69,8 +69,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| IAUTH-01 | Phase 5 | Pending |
-| IAUTH-02 | Phase 5 | Pending |
+| IAUTH-01 | Phase 5 | Complete |
+| IAUTH-02 | Phase 5 | Complete |
 | BILL-01 | Phase 5 | Pending |
 | BILL-02 | Phase 5 | Pending |
 | BILL-03 | Phase 5 | Pending |

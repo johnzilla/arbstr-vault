@@ -38,7 +38,7 @@
 **Plans:** 2 plans
 
 Plans:
-- [ ] 05-01-PLAN.md — Internal auth middleware and VAULT_INTERNAL_TOKEN config
+- [x] 05-01-PLAN.md — Internal auth middleware and VAULT_INTERNAL_TOKEN config
 - [ ] 05-02-PLAN.md — POST /internal/reserve route, app registration, and integration tests
 
 ### Phase 6: Settle, Release, and Verification
