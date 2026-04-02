@@ -36,7 +36,7 @@ Agents can request and execute payments within explicit policy limits, with all 
 <!-- v1.1 scope: Internal Billing API -->
 
 - [ ] Internal reserve/settle/release billing routes for arbstr core (BILL-01)
-- [ ] Internal auth middleware with shared secret token (BILL-02)
+- ✓ Internal auth middleware with shared secret token (BILL-02) — v1.1 Phase 5
 - [ ] Partial settlement via RELEASE+PAYMENT ledger pattern (BILL-03)
 - [ ] Idempotent settle and release operations (BILL-04)
 
@@ -127,4 +127,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-02 after v1.1 milestone started*
+*Last updated: 2026-04-02 after Phase 5 complete*
