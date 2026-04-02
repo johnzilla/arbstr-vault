@@ -35,11 +35,11 @@
   2. Arbstr core can POST to `/internal/reserve` with an agent token, amount, correlation ID, and model, and receive back a `reservation_id`
   3. Reserve with an invalid agent token returns 401; reserve with insufficient balance returns 402
   4. After a successful reserve, the agent's available balance is reduced by the reserved amount (RESERVE ledger entry exists)
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 05-01: TBD
-- [ ] 05-02: TBD
+- [ ] 05-01-PLAN.md — Internal auth middleware and VAULT_INTERNAL_TOKEN config
+- [ ] 05-02-PLAN.md — POST /internal/reserve route, app registration, and integration tests
 
 ### Phase 6: Settle, Release, and Verification
 **Goal**: Arbstr core can settle reservations at actual cost, release unused reservations, and all operations are safe to retry
@@ -67,5 +67,5 @@ Plans:
 | 2. Lightning Backend | v1.0 | 3/3 | Complete | 2026-02-27 |
 | 3. Cashu Backend | v1.0 | 3/3 | Complete | 2026-02-28 |
 | 4. Operator Experience | v1.0 | 4/4 | Complete | 2026-02-28 |
-| 5. Internal Auth and Reserve | v1.1 | 0/? | Not started | - |
+| 5. Internal Auth and Reserve | v1.1 | 0/2 | Not started | - |
 | 6. Settle, Release, and Verification | v1.1 | 0/? | Not started | - |
