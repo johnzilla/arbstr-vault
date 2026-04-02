@@ -17,6 +17,7 @@ const configSchema = z
     CASHU_THRESHOLD_MSAT: z.coerce.number().default(1_000_000),
     OPERATOR_WEBHOOK_URL: z.string().url().optional(),
     OPERATOR_WEBHOOK_SECRET: z.string().min(16).optional(),
+    VAULT_INTERNAL_TOKEN: z.string().min(32).optional(),
   })
   .refine(
     (data) => {
