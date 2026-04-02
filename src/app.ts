@@ -10,6 +10,7 @@ import { agentHistoryRoutes } from './routes/agent/history.routes.js';
 import { agentPaymentRoutes } from './routes/agent/payments.routes.js';
 import { agentPaymentStatusRoutes } from './routes/agent/payment-status.routes.js';
 import { agentWithdrawalRoutes } from './routes/agent/withdrawals.routes.js';
+import { internalBillingRoutes } from './routes/internal/reserve.routes.js';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type * as schema from './db/schema.js';
 import { db as defaultDb } from './db/client.js';
@@ -17,6 +18,7 @@ import { loggerConfig } from './plugins/pino.plugin.js';
 import { createPaymentsService } from './modules/payments/payments.service.js';
 import { simulatedWallet } from './modules/payments/wallet/simulated.wallet.js';
 import type { WalletBackend } from './modules/payments/wallet/wallet.interface.js';
+import { config } from './config.js';
 
 type DB = BetterSQLite3Database<typeof schema>;
 
@@ -137,6 +139,11 @@ export function buildApp(
   app.register(agentPaymentRoutes);
   app.register(agentPaymentStatusRoutes);
   app.register(agentWithdrawalRoutes);
+
+  // Internal billing routes (only when VAULT_INTERNAL_TOKEN is configured)
+  if (config.VAULT_INTERNAL_TOKEN) {
+    app.register(internalBillingRoutes);
+  }
 
   return app;
 }
