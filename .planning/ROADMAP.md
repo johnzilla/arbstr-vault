@@ -21,7 +21,7 @@
 
 **Milestone Goal:** Add internal billing routes (reserve/settle/release) for arbstr core to call for per-request LLM billing, with shared-secret auth and idempotent operations.
 
-- [ ] **Phase 5: Internal Auth and Reserve** - Auth middleware and reserve route for holding funds against agent balances
+- [x] **Phase 5: Internal Auth and Reserve** - Auth middleware and reserve route for holding funds against agent balances
 - [ ] **Phase 6: Settle, Release, and Verification** - Partial settlement, release, idempotency, and full test coverage
 
 ## Phase Details
@@ -39,7 +39,7 @@
 
 Plans:
 - [x] 05-01-PLAN.md — Internal auth middleware and VAULT_INTERNAL_TOKEN config
-- [ ] 05-02-PLAN.md — POST /internal/reserve route, app registration, and integration tests
+- [x] 05-02-PLAN.md — POST /internal/reserve route, app registration, and integration tests
 
 ### Phase 6: Settle, Release, and Verification
 **Goal**: Arbstr core can settle reservations at actual cost, release unused reservations, and all operations are safe to retry
@@ -67,5 +67,5 @@ Plans:
 | 2. Lightning Backend | v1.0 | 3/3 | Complete | 2026-02-27 |
 | 3. Cashu Backend | v1.0 | 3/3 | Complete | 2026-02-28 |
 | 4. Operator Experience | v1.0 | 4/4 | Complete | 2026-02-28 |
-| 5. Internal Auth and Reserve | v1.1 | 0/2 | Not started | - |
+| 5. Internal Auth and Reserve | v1.1 | 2/2 | Complete | 2026-04-02 |
 | 6. Settle, Release, and Verification | v1.1 | 0/? | Not started | - |

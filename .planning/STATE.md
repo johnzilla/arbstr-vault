@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Internal Billing API
 status: executing
-stopped_at: Completed 05-01-PLAN.md — internalAuth middleware and config
-last_updated: "2026-04-02T22:18:21.771Z"
+stopped_at: Completed 05-02-PLAN.md — POST /internal/reserve route and integration tests
+last_updated: "2026-04-02T22:23:39Z"
 last_activity: 2026-04-02
 progress:
   total_phases: 2
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 1
-  percent: 67
+  completed_plans: 2
+  percent: 100
 ---
 
 # Project State
@@ -25,9 +25,9 @@ See: .planning/PROJECT.md (updated 2026-04-02)
 
 ## Current Position
 
-Phase: 05 (internal-auth-and-reserve) — EXECUTING
+Phase: 05 (internal-auth-and-reserve) — COMPLETE
 Plan: 2 of 2
-Status: Ready to execute
+Status: Complete — all plans executed
 Last activity: 2026-04-02
 
 Progress: [██████████████░░░░░░] 67% (v1.0 complete, v1.1 starting)
@@ -56,6 +56,7 @@ Progress: [██████████████░░░░░░] 67% (v1
 
 *Updated after each plan completion*
 | Phase 05-internal-auth-and-reserve P01 | 8 | 1 tasks | 4 files |
+| Phase 05-internal-auth-and-reserve P02 | 3 | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -69,6 +70,7 @@ Recent decisions affecting current work:
 - All billing uses mode: 'simulated': No real wallet calls from billing routes
 - [Phase 05-01]: VAULT_INTERNAL_TOKEN is optional in config so service starts normally without it; internal routes return 401 when unconfigured (fail-closed)
 - [Phase 05-01]: Uses X-Internal-Token header (not Authorization/Bearer) to distinguish from agent/admin auth
+- [Phase 05-02]: vitest.config.ts must include VAULT_INTERNAL_TOKEN in test env to prevent ESM hoisting from causing config to parse without the token
 
 ### Pending Todos
 
@@ -80,6 +82,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-02T22:18:21.768Z
-Stopped at: Completed 05-01-PLAN.md — internalAuth middleware and config
+Last session: 2026-04-02T22:23:39Z
+Stopped at: Completed 05-02-PLAN.md — POST /internal/reserve route and integration tests
 Resume file: None

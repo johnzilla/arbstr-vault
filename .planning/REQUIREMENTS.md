@@ -14,10 +14,10 @@ Requirements for Internal Billing API. Each maps to roadmap phases.
 
 ### Billing — Reserve
 
-- [ ] **BILL-01**: Arbstr core can reserve funds against an agent's balance by providing the agent's `vtk_` token, amount, correlation ID, and model
-- [ ] **BILL-02**: Reserve validates the agent token via existing `hashToken()` + `findByTokenHash()` flow, returning 401 for invalid tokens
-- [ ] **BILL-03**: Reserve checks agent balance is sufficient, returning 402 if not
-- [ ] **BILL-04**: Reserve inserts a RESERVE ledger entry (negative amount, `mode: 'simulated'`) and returns a `reservation_id`
+- [x] **BILL-01**: Arbstr core can reserve funds against an agent's balance by providing the agent's `vtk_` token, amount, correlation ID, and model
+- [x] **BILL-02**: Reserve validates the agent token via existing `hashToken()` + `findByTokenHash()` flow, returning 401 for invalid tokens
+- [x] **BILL-03**: Reserve checks agent balance is sufficient, returning 402 if not
+- [x] **BILL-04**: Reserve inserts a RESERVE ledger entry (negative amount, `mode: 'simulated'`) and returns a `reservation_id`
 
 ### Billing — Settle
 
@@ -71,10 +71,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | IAUTH-01 | Phase 5 | Complete |
 | IAUTH-02 | Phase 5 | Complete |
-| BILL-01 | Phase 5 | Pending |
-| BILL-02 | Phase 5 | Pending |
-| BILL-03 | Phase 5 | Pending |
-| BILL-04 | Phase 5 | Pending |
+| BILL-01 | Phase 5 | Complete |
+| BILL-02 | Phase 5 | Complete |
+| BILL-03 | Phase 5 | Complete |
+| BILL-04 | Phase 5 | Complete |
 | BILL-05 | Phase 6 | Pending |
 | BILL-06 | Phase 6 | Pending |
 | BILL-07 | Phase 6 | Pending |
