@@ -109,6 +109,29 @@ export const ledgerRepo = {
   },
 
   /**
+   * Return a single ledger entry by primary key, or undefined if not found.
+   * Used by settle/release routes to look up a RESERVE entry by reservation_id.
+   */
+  findById(db: Db, id: string) {
+    return db.select()
+      .from(ledgerEntries)
+      .where(eq(ledgerEntries.id, id))
+      .get();
+  },
+
+  /**
+   * Return a single ledger entry matching ref_id AND entry_type, or undefined.
+   * Used for idempotency checks: e.g., checking if a RELEASE already exists for
+   * a given reservation_id before settling or releasing again.
+   */
+  findByRefIdAndType(db: Db, refId: string, entryType: string) {
+    return db.select()
+      .from(ledgerEntries)
+      .where(and(eq(ledgerEntries.ref_id, refId), eq(ledgerEntries.entry_type, entryType as 'DEPOSIT' | 'PAYMENT' | 'REFUND' | 'RESERVE' | 'RELEASE')))
+      .get();
+  },
+
+  /**
    * Return all pending Lightning payments for crash recovery.
    * Returns RESERVE entries with mode='lightning' that have no corresponding
    * RELEASE or PAYMENT entry with the same ref_id.
