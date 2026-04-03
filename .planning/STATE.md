@@ -4,7 +4,7 @@ milestone: v1.1
 milestone_name: Internal Billing API
 status: verifying
 stopped_at: Completed 06-02-PLAN.md (settle + release integration tests, 22 tests passing)
-last_updated: "2026-04-03T01:16:15.103Z"
+last_updated: "2026-04-03T01:23:05.381Z"
 last_activity: 2026-04-03
 progress:
   total_phases: 2
@@ -25,8 +25,8 @@ See: .planning/PROJECT.md (updated 2026-04-02)
 
 ## Current Position
 
-Phase: 06 (settle-release-and-verification) — EXECUTING
-Plan: 2 of 2
+Phase: 06
+Plan: Not started
 Status: Phase complete — ready for verification
 Last activity: 2026-04-03
 
