@@ -54,7 +54,7 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 06-01-PLAN.md — Settle and release routes with ledgerRepo helpers
+- [x] 06-01-PLAN.md — Settle and release routes with ledgerRepo helpers
 - [ ] 06-02-PLAN.md — Integration tests for settle, release, idempotency, and end-to-end flow
 
 ## Progress

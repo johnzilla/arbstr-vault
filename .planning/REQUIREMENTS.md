@@ -21,15 +21,15 @@ Requirements for Internal Billing API. Each maps to roadmap phases.
 
 ### Billing — Settle
 
-- [ ] **BILL-05**: Arbstr core can settle a reservation at the actual cost (which may differ from reserved amount)
-- [ ] **BILL-06**: Settle atomically inserts RELEASE (credit back full reserve) + PAYMENT (debit actual cost) in one transaction
-- [ ] **BILL-07**: Settle is idempotent — settling an already-settled reservation returns success
-- [ ] **BILL-08**: Settle records audit metadata (tokens_in, tokens_out, provider, latency_ms)
+- [x] **BILL-05**: Arbstr core can settle a reservation at the actual cost (which may differ from reserved amount)
+- [x] **BILL-06**: Settle atomically inserts RELEASE (credit back full reserve) + PAYMENT (debit actual cost) in one transaction
+- [x] **BILL-07**: Settle is idempotent — settling an already-settled reservation returns success
+- [x] **BILL-08**: Settle records audit metadata (tokens_in, tokens_out, provider, latency_ms)
 
 ### Billing — Release
 
-- [ ] **BILL-09**: Arbstr core can release a reservation to restore the full reserved amount
-- [ ] **BILL-10**: Release is idempotent — releasing an already-released reservation returns success
+- [x] **BILL-09**: Arbstr core can release a reservation to restore the full reserved amount
+- [x] **BILL-10**: Release is idempotent — releasing an already-released reservation returns success
 
 ## Future Requirements
 
@@ -75,12 +75,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | BILL-02 | Phase 5 | Complete |
 | BILL-03 | Phase 5 | Complete |
 | BILL-04 | Phase 5 | Complete |
-| BILL-05 | Phase 6 | Pending |
-| BILL-06 | Phase 6 | Pending |
-| BILL-07 | Phase 6 | Pending |
-| BILL-08 | Phase 6 | Pending |
-| BILL-09 | Phase 6 | Pending |
-| BILL-10 | Phase 6 | Pending |
+| BILL-05 | Phase 6 | Complete |
+| BILL-06 | Phase 6 | Complete |
+| BILL-07 | Phase 6 | Complete |
+| BILL-08 | Phase 6 | Complete |
+| BILL-09 | Phase 6 | Complete |
+| BILL-10 | Phase 6 | Complete |
 
 **Coverage:**
 - v1.1 requirements: 12 total
