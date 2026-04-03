@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Internal Billing API
-status: executing
-stopped_at: Completed 06-settle-release-and-verification/06-01-PLAN.md
-last_updated: "2026-04-03T01:11:00.506Z"
+status: verifying
+stopped_at: Completed 06-02-PLAN.md (settle + release integration tests, 22 tests passing)
+last_updated: "2026-04-03T01:16:15.103Z"
 last_activity: 2026-04-03
 progress:
   total_phases: 2
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 4
-  completed_plans: 3
+  completed_plans: 4
   percent: 67
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-04-02)
 
 Phase: 06 (settle-release-and-verification) — EXECUTING
 Plan: 2 of 2
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-04-03
 
 Progress: [██████████████░░░░░░] 67% (v1.0 complete, v1.1 starting)
@@ -58,6 +58,7 @@ Progress: [██████████████░░░░░░] 67% (v1
 | Phase 05-internal-auth-and-reserve P01 | 8 | 1 tasks | 4 files |
 | Phase 05-internal-auth-and-reserve P02 | 3 | 2 tasks | 6 files |
 | Phase 06-settle-release-and-verification P01 | 15 | 2 tasks | 2 files |
+| Phase 06-settle-release-and-verification P02 | 15 | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -74,6 +75,7 @@ Recent decisions affecting current work:
 - [Phase 05-02]: vitest.config.ts must include VAULT_INTERNAL_TOKEN in test env to prevent ESM hoisting from causing config to parse without the token
 - [Phase 06-settle-release-and-verification]: Idempotency for settle/release checks RELEASE entry existence (ref_id=reservation_id) — covers both operations atomically
 - [Phase 06-settle-release-and-verification]: Partial settlement: RELEASE restores full reserved amount then PAYMENT debits actual cost — keeps ledger append-only
+- [Phase 06-02]: reserveFunds() module-scope helper shared across settle, release, and e2e test suites
 
 ### Pending Todos
 
@@ -85,6 +87,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-03T01:11:00.503Z
-Stopped at: Completed 06-settle-release-and-verification/06-01-PLAN.md
+Last session: 2026-04-03T01:16:15.099Z
+Stopped at: Completed 06-02-PLAN.md (settle + release integration tests, 22 tests passing)
 Resume file: None

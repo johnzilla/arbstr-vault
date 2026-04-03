@@ -22,7 +22,7 @@
 **Milestone Goal:** Add internal billing routes (reserve/settle/release) for arbstr core to call for per-request LLM billing, with shared-secret auth and idempotent operations.
 
 - [x] **Phase 5: Internal Auth and Reserve** - Auth middleware and reserve route for holding funds against agent balances
-- [ ] **Phase 6: Settle, Release, and Verification** - Partial settlement, release, idempotency, and full test coverage
+- [x] **Phase 6: Settle, Release, and Verification** - Partial settlement, release, idempotency, and full test coverage (completed 2026-04-03)
 
 ## Phase Details
 
@@ -51,11 +51,11 @@ Plans:
   3. Releasing a reservation restores the full reserved amount to the agent's available balance
   4. Releasing an already-released reservation returns success without creating duplicate ledger entries
   5. Settle records audit metadata (tokens_in, tokens_out, provider, latency_ms) on the PAYMENT entry
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 
 Plans:
 - [x] 06-01-PLAN.md — Settle and release routes with ledgerRepo helpers
-- [ ] 06-02-PLAN.md — Integration tests for settle, release, idempotency, and end-to-end flow
+- [x] 06-02-PLAN.md — Integration tests for settle, release, idempotency, and end-to-end flow
 
 ## Progress
 
@@ -68,4 +68,4 @@ Plans:
 | 3. Cashu Backend | v1.0 | 3/3 | Complete | 2026-02-28 |
 | 4. Operator Experience | v1.0 | 4/4 | Complete | 2026-02-28 |
 | 5. Internal Auth and Reserve | v1.1 | 2/2 | Complete | 2026-04-02 |
-| 6. Settle, Release, and Verification | v1.1 | 0/2 | Not started | - |
+| 6. Settle, Release, and Verification | v1.1 | 2/2 | Complete   | 2026-04-03 |
