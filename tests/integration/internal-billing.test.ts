@@ -248,3 +248,446 @@ describe('POST /internal/reserve', () => {
     expect(res.statusCode).toBe(400);
   });
 });
+
+// Helper: reserve funds and return reservation_id (module-scoped for reuse)
+async function reserveFunds(app: ReturnType<typeof buildApp>, amount: number = 50_000): Promise<string> {
+  const res = await app.inject({
+    method: 'POST',
+    url: '/internal/reserve',
+    headers: { 'x-internal-token': TEST_INTERNAL_TOKEN },
+    payload: {
+      agent_token: TEST_AGENT_TOKEN,
+      amount_msats: amount,
+      correlation_id: 'corr_settle_test',
+      model: 'gpt-4o',
+    },
+  });
+  return (JSON.parse(res.body) as { reservation_id: string }).reservation_id;
+}
+
+describe('POST /internal/settle', () => {
+  let app: ReturnType<typeof buildApp>;
+
+  beforeEach(async () => {
+    app = buildTestApp();
+    await app.ready();
+    await setupTestAgent(app);
+  });
+
+  afterEach(async () => {
+    await app.close();
+  });
+
+  it('valid settle returns 200 with settled response', async () => {
+    const reservationId = await reserveFunds(app, 50_000);
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/internal/settle',
+      headers: { 'x-internal-token': TEST_INTERNAL_TOKEN },
+      payload: {
+        reservation_id: reservationId,
+        actual_msats: 32_000,
+        tokens_in: 100,
+        tokens_out: 200,
+        provider: 'openai',
+        latency_ms: 500,
+      },
+    });
+
+    expect(res.statusCode).toBe(200);
+    const body = JSON.parse(res.body) as {
+      settled: boolean;
+      refunded_msats: number;
+      actual_msats: number;
+      remaining_balance_msats: number;
+    };
+    expect(body.settled).toBe(true);
+    expect(body.refunded_msats).toBe(18_000); // 50000 - 32000
+    expect(body.actual_msats).toBe(32_000);
+    expect(body.remaining_balance_msats).toBe(68_000); // 100000 - 32000
+  });
+
+  it('settle inserts RELEASE and PAYMENT ledger entries atomically', async () => {
+    const reservationId = await reserveFunds(app, 50_000);
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/internal/settle',
+      headers: { 'x-internal-token': TEST_INTERNAL_TOKEN },
+      payload: {
+        reservation_id: reservationId,
+        actual_msats: 30_000,
+        tokens_in: 100,
+        tokens_out: 200,
+        provider: 'openai',
+        latency_ms: 500,
+      },
+    });
+
+    expect(res.statusCode).toBe(200);
+
+    // Query ledger entries with ref_id = reservation_id
+    const entries = app.db
+      .select()
+      .from(schema.ledgerEntries)
+      .where(eq(schema.ledgerEntries.ref_id, reservationId))
+      .all();
+
+    const releaseEntry = entries.find((e) => e.entry_type === 'RELEASE');
+    const paymentEntry = entries.find((e) => e.entry_type === 'PAYMENT');
+
+    expect(releaseEntry).toBeDefined();
+    expect(releaseEntry!.amount_msat).toBe(50_000);
+    expect(releaseEntry!.mode).toBe('simulated');
+
+    expect(paymentEntry).toBeDefined();
+    expect(paymentEntry!.amount_msat).toBe(-30_000);
+    expect(paymentEntry!.mode).toBe('simulated');
+  });
+
+  it('settle is idempotent - second settle returns same response', async () => {
+    const reservationId = await reserveFunds(app, 50_000);
+
+    // First settle
+    await app.inject({
+      method: 'POST',
+      url: '/internal/settle',
+      headers: { 'x-internal-token': TEST_INTERNAL_TOKEN },
+      payload: {
+        reservation_id: reservationId,
+        actual_msats: 20_000,
+        tokens_in: 100,
+        tokens_out: 200,
+        provider: 'openai',
+        latency_ms: 500,
+      },
+    });
+
+    // Second settle (idempotent retry)
+    const res2 = await app.inject({
+      method: 'POST',
+      url: '/internal/settle',
+      headers: { 'x-internal-token': TEST_INTERNAL_TOKEN },
+      payload: {
+        reservation_id: reservationId,
+        actual_msats: 20_000,
+        tokens_in: 100,
+        tokens_out: 200,
+        provider: 'openai',
+        latency_ms: 500,
+      },
+    });
+
+    expect(res2.statusCode).toBe(200);
+    const body = JSON.parse(res2.body) as { settled: boolean };
+    expect(body.settled).toBe(true);
+
+    // Count RELEASE entries with ref_id = reservation_id — exactly 1
+    const releaseEntries = app.db
+      .select()
+      .from(schema.ledgerEntries)
+      .where(eq(schema.ledgerEntries.ref_id, reservationId))
+      .all()
+      .filter((e) => e.entry_type === 'RELEASE');
+    expect(releaseEntries.length).toBe(1);
+
+    // Count PAYMENT entries with ref_id = reservation_id — exactly 1
+    const paymentEntries = app.db
+      .select()
+      .from(schema.ledgerEntries)
+      .where(eq(schema.ledgerEntries.ref_id, reservationId))
+      .all()
+      .filter((e) => e.entry_type === 'PAYMENT');
+    expect(paymentEntries.length).toBe(1);
+  });
+
+  it('settle records audit metadata', async () => {
+    const reservationId = await reserveFunds(app, 50_000);
+
+    await app.inject({
+      method: 'POST',
+      url: '/internal/settle',
+      headers: { 'x-internal-token': TEST_INTERNAL_TOKEN },
+      payload: {
+        reservation_id: reservationId,
+        actual_msats: 25_000,
+        tokens_in: 150,
+        tokens_out: 500,
+        provider: 'openai',
+        latency_ms: 1200,
+      },
+    });
+
+    const auditEntry = app.db
+      .select()
+      .from(schema.auditLog)
+      .where(eq(schema.auditLog.ref_id, reservationId))
+      .get();
+
+    expect(auditEntry).toBeDefined();
+    expect(auditEntry!.action).toBe('PAYMENT_SETTLED');
+    const meta = auditEntry!.metadata as { tokens_in: number; tokens_out: number; provider: string; latency_ms: number };
+    expect(meta.tokens_in).toBe(150);
+    expect(meta.tokens_out).toBe(500);
+    expect(meta.provider).toBe('openai');
+    expect(meta.latency_ms).toBe(1200);
+  });
+
+  it('settle with unknown reservation_id returns 404', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/internal/settle',
+      headers: { 'x-internal-token': TEST_INTERNAL_TOKEN },
+      payload: {
+        reservation_id: 'tx_nonexistent',
+        actual_msats: 10_000,
+        tokens_in: 100,
+        tokens_out: 200,
+        provider: 'openai',
+        latency_ms: 500,
+      },
+    });
+
+    expect(res.statusCode).toBe(404);
+    const body = JSON.parse(res.body) as { error: { code: string } };
+    expect(body.error.code).toBe('not_found');
+  });
+
+  it('settle with actual cost higher than reserved amount works correctly', async () => {
+    const reservationId = await reserveFunds(app, 10_000);
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/internal/settle',
+      headers: { 'x-internal-token': TEST_INTERNAL_TOKEN },
+      payload: {
+        reservation_id: reservationId,
+        actual_msats: 15_000,
+        tokens_in: 100,
+        tokens_out: 200,
+        provider: 'openai',
+        latency_ms: 500,
+      },
+    });
+
+    expect(res.statusCode).toBe(200);
+    const body = JSON.parse(res.body) as {
+      settled: boolean;
+      refunded_msats: number;
+      actual_msats: number;
+      remaining_balance_msats: number;
+    };
+    expect(body.settled).toBe(true);
+    expect(body.refunded_msats).toBe(-5_000); // 10000 - 15000 = -5000 (overcharge)
+    expect(body.remaining_balance_msats).toBe(85_000); // 100000 - 15000
+  });
+
+  it('balance after settle reflects actual cost not reserved amount', async () => {
+    const reservationId = await reserveFunds(app, 80_000);
+    // After reserve: balance = 100000 - 80000 = 20000
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/internal/settle',
+      headers: { 'x-internal-token': TEST_INTERNAL_TOKEN },
+      payload: {
+        reservation_id: reservationId,
+        actual_msats: 30_000,
+        tokens_in: 100,
+        tokens_out: 200,
+        provider: 'openai',
+        latency_ms: 500,
+      },
+    });
+
+    expect(res.statusCode).toBe(200);
+    const body = JSON.parse(res.body) as { remaining_balance_msats: number };
+    // RELEASE +80000, PAYMENT -30000 => net balance = 100000 - 30000 = 70000
+    expect(body.remaining_balance_msats).toBe(70_000);
+  });
+});
+
+describe('POST /internal/release', () => {
+  let app: ReturnType<typeof buildApp>;
+
+  beforeEach(async () => {
+    app = buildTestApp();
+    await app.ready();
+    await setupTestAgent(app);
+  });
+
+  afterEach(async () => {
+    await app.close();
+  });
+
+  it('valid release returns 200 with released:true', async () => {
+    const reservationId = await reserveFunds(app, 40_000);
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/internal/release',
+      headers: { 'x-internal-token': TEST_INTERNAL_TOKEN },
+      payload: { reservation_id: reservationId },
+    });
+
+    expect(res.statusCode).toBe(200);
+    const body = JSON.parse(res.body) as { released: boolean };
+    expect(body.released).toBe(true);
+  });
+
+  it('release restores full reserved amount to balance', async () => {
+    // Reserve 60,000 — balance drops to 40,000
+    const reservationId = await reserveFunds(app, 60_000);
+
+    await app.inject({
+      method: 'POST',
+      url: '/internal/release',
+      headers: { 'x-internal-token': TEST_INTERNAL_TOKEN },
+      payload: { reservation_id: reservationId },
+    });
+
+    // After release, balance should be restored to 100,000
+    // Verify by attempting a large reserve that would only succeed if balance is restored
+    const res = await app.inject({
+      method: 'POST',
+      url: '/internal/reserve',
+      headers: { 'x-internal-token': TEST_INTERNAL_TOKEN },
+      payload: {
+        agent_token: TEST_AGENT_TOKEN,
+        amount_msats: 95_000,
+        correlation_id: 'corr_balance_restore_check',
+        model: 'gpt-4o',
+      },
+    });
+
+    expect(res.statusCode).toBe(200); // Would be 402 if balance not restored
+  });
+
+  it('release is idempotent - second release returns same response', async () => {
+    const reservationId = await reserveFunds(app, 30_000);
+
+    // First release
+    await app.inject({
+      method: 'POST',
+      url: '/internal/release',
+      headers: { 'x-internal-token': TEST_INTERNAL_TOKEN },
+      payload: { reservation_id: reservationId },
+    });
+
+    // Second release (idempotent retry)
+    const res2 = await app.inject({
+      method: 'POST',
+      url: '/internal/release',
+      headers: { 'x-internal-token': TEST_INTERNAL_TOKEN },
+      payload: { reservation_id: reservationId },
+    });
+
+    expect(res2.statusCode).toBe(200);
+    const body = JSON.parse(res2.body) as { released: boolean };
+    expect(body.released).toBe(true);
+
+    // Count RELEASE entries with ref_id = reservation_id — exactly 1
+    const releaseEntries = app.db
+      .select()
+      .from(schema.ledgerEntries)
+      .where(eq(schema.ledgerEntries.ref_id, reservationId))
+      .all()
+      .filter((e) => e.entry_type === 'RELEASE');
+    expect(releaseEntries.length).toBe(1);
+  });
+
+  it('release with unknown reservation_id returns 404', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/internal/release',
+      headers: { 'x-internal-token': TEST_INTERNAL_TOKEN },
+      payload: { reservation_id: 'tx_nonexistent' },
+    });
+
+    expect(res.statusCode).toBe(404);
+    const body = JSON.parse(res.body) as { error: { code: string } };
+    expect(body.error.code).toBe('not_found');
+  });
+
+  it('release inserts RELEASE ledger entry with correct values', async () => {
+    const reservationId = await reserveFunds(app, 45_000);
+
+    await app.inject({
+      method: 'POST',
+      url: '/internal/release',
+      headers: { 'x-internal-token': TEST_INTERNAL_TOKEN },
+      payload: { reservation_id: reservationId },
+    });
+
+    const releaseEntry = app.db
+      .select()
+      .from(schema.ledgerEntries)
+      .where(eq(schema.ledgerEntries.ref_id, reservationId))
+      .get();
+
+    expect(releaseEntry).toBeDefined();
+    expect(releaseEntry!.entry_type).toBe('RELEASE');
+    expect(releaseEntry!.amount_msat).toBe(45_000);
+    expect(releaseEntry!.mode).toBe('simulated');
+  });
+});
+
+describe('End-to-end billing flow', () => {
+  let app: ReturnType<typeof buildApp>;
+
+  beforeEach(async () => {
+    app = buildTestApp();
+    await app.ready();
+    await setupTestAgent(app);
+  });
+
+  afterEach(async () => {
+    await app.close();
+  });
+
+  it('deposit -> reserve -> settle -> balance reflects actual cost', async () => {
+    // Start with agent at 100,000 balance (set up in setupTestAgent)
+
+    // Step a: Reserve 50,000 (remaining: 50,000)
+    const reservationId = await reserveFunds(app, 50_000);
+
+    // Step b & c: Settle with actual_msats: 12,000
+    const settleRes = await app.inject({
+      method: 'POST',
+      url: '/internal/settle',
+      headers: { 'x-internal-token': TEST_INTERNAL_TOKEN },
+      payload: {
+        reservation_id: reservationId,
+        actual_msats: 12_000,
+        tokens_in: 100,
+        tokens_out: 200,
+        provider: 'anthropic',
+        latency_ms: 800,
+      },
+    });
+
+    expect(settleRes.statusCode).toBe(200);
+    const settleBody = JSON.parse(settleRes.body) as { remaining_balance_msats: number };
+    // 100,000 - 12,000 = 88,000
+    expect(settleBody.remaining_balance_msats).toBe(88_000);
+
+    // Step d: Reserve again for 85,000 — should succeed (balance is 88,000)
+    const reserve2Res = await app.inject({
+      method: 'POST',
+      url: '/internal/reserve',
+      headers: { 'x-internal-token': TEST_INTERNAL_TOKEN },
+      payload: {
+        agent_token: TEST_AGENT_TOKEN,
+        amount_msats: 85_000,
+        correlation_id: 'corr_second_reserve',
+        model: 'claude-3-5-sonnet',
+      },
+    });
+
+    expect(reserve2Res.statusCode).toBe(200);
+    // Step e: remaining_balance_msats should be 3,000 (88,000 - 85,000)
+    const reserve2Body = JSON.parse(reserve2Res.body) as { remaining_balance_msats: number };
+    expect(reserve2Body.remaining_balance_msats).toBe(3_000);
+  });
+});
