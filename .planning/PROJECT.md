@@ -2,7 +2,7 @@
 
 ## What This Is
 
-A centralized treasury service that acts as a "bank" for AI agents. Holds all wallet keys, connects to Lightning (LND) and Cashu (self-hosted Nutshell mint) payment rails, manages per-agent sub-accounts with policy enforcement, and provides an auditable record of all economic actions. Includes operator control plane with human approval workflow, versioned policies, balance alerts, and dashboard. Built for personal use — the sole customer is the operator plus their own agents.
+A centralized treasury service that acts as a "bank" for AI agents. Holds all wallet keys, connects to Lightning (LND) and Cashu (self-hosted Nutshell mint) payment rails, manages per-agent sub-accounts with policy enforcement, and provides an auditable record of all economic actions. Includes operator control plane with human approval workflow, versioned policies, balance alerts, and dashboard. Provides internal billing API for arbstr core's per-request LLM billing with reserve/settle/release flow. Built for personal use — the sole customer is the operator plus their own agents.
 
 ## Core Value
 
@@ -31,16 +31,14 @@ Agents can request and execute payments within explicit policy limits, with all 
 - ✓ Operator dashboard (all agents, balances, spend, policy state) — v1.0
 - ✓ Agent withdrawal proposals with mandatory approval — v1.0
 
+- ✓ Internal reserve/settle/release billing routes for arbstr core — v1.1
+- ✓ Internal auth middleware with shared secret token — v1.1
+- ✓ Partial settlement via RELEASE+PAYMENT ledger pattern — v1.1
+- ✓ Idempotent settle and release operations — v1.1
+
 ### Active
 
-<!-- v1.1 scope: Internal Billing API -->
-
-- ✓ Internal reserve/settle/release billing routes for arbstr core (BILL-01) — v1.1 Phase 5-6
-- ✓ Internal auth middleware with shared secret token (BILL-02) — v1.1 Phase 5
-- ✓ Partial settlement via RELEASE+PAYMENT ledger pattern (BILL-03) — v1.1 Phase 6
-- ✓ Idempotent settle and release operations (BILL-04) — v1.1 Phase 6
-
-### Future
+<!-- Next milestone scope -->
 
 - [ ] Per-agent max balance limit (PLCY-10)
 - [ ] Per-agent daily loss limit with net position tracking (PLCY-11)
@@ -64,20 +62,10 @@ Agents can request and execute payments within explicit policy limits, with all 
 - CEX connectors — belongs in dedicated service, not treasury
 - Sophisticated risk models — basic rules/limits sufficient for current scope
 
-## Current Milestone: v1.1 Internal Billing API
-
-**Goal:** Add three `/internal/*` routes (reserve/settle/release) that arbstr core calls for per-request billing, with partial settlement support via RELEASE+PAYMENT ledger pattern.
-
-**Target features:**
-- `POST /internal/reserve` — hold funds against agent balance before LLM call
-- `POST /internal/settle` — partial settlement (RELEASE full reserve + PAYMENT actual cost)
-- `POST /internal/release` — cancel reservation and restore balance
-- Internal auth middleware (`X-Internal-Token`, env var comparison)
-- Idempotent settle and release (safe to retry)
-
 ## Context
 
-- **Shipped:** v1.0 MVP (2026-02-28) — 9,617 LOC TypeScript, 113 tests
+- **Shipped:** v1.1 Internal Billing API (2026-04-03) — 10,746 LOC TypeScript, 266 tests
+- **Prior:** v1.0 MVP (2026-02-28) — 9,617 LOC, 113 tests
 - **Tech stack:** Fastify, Drizzle ORM, SQLite (WAL mode), Zod v4, Pino, lightning (npm), cashu-ts v3.5
 - **Architecture:** buildApp() factory pattern, injected DB for test isolation, createPaymentsService(wallet) for wallet decoupling
 - **Payment rails:** Simulated (dev), Lightning via LND, Cashu via self-hosted Nutshell mint
@@ -106,8 +94,10 @@ Agents can request and execute payments within explicit policy limits, with all 
 | RESERVE/RELEASE/PAYMENT ledger pattern | Atomic holds during async wallet calls prevent TOCTOU races | ✓ Good — crash-safe |
 | Append-only policy versions | Point-in-time evaluation prevents retroactive policy changes | ✓ Good — clean audit trail |
 | Webhook for operator notifications | Fire-and-forget with HMAC-SHA256 + retry; never blocks payment | ✓ Good — decoupled |
-| Partial settlement via RELEASE+PAYMENT | Keeps ledger append-only; no entry modification needed | — Pending |
-| Internal auth via shared secret (not agent tokens) | Service-to-service trust; simpler than agent auth for internal calls | — Pending |
+| Partial settlement via RELEASE+PAYMENT | Keeps ledger append-only; no entry modification needed | ✓ Good — clean three-entry pattern (RESERVE, RELEASE, PAYMENT) |
+| Internal auth via shared secret (not agent tokens) | Service-to-service trust; simpler than agent auth for internal calls | ✓ Good — constant-time comparison, optional config |
+| Settle metadata in audit log (not ledger) | Keeps ledger table clean; audit module already supports JSON metadata | ✓ Good — no schema migration needed |
+| Idempotency via RELEASE existence check | No status columns needed; append-only pattern preserved | ✓ Good — single query guard for both settle and release |
 
 ## Evolution
 
@@ -127,4 +117,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-03 after Phase 6 complete — v1.1 milestone complete*
+*Last updated: 2026-04-03 after v1.1 milestone*
