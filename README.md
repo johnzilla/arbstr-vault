@@ -16,6 +16,8 @@ Built for personal use — the sole customer is the operator plus their own agen
 - **Operator dashboard** — All agents, balances, spend, utilization, policy state in one call
 - **Audit log** — Append-only, atomic with every ledger update, filterable by agent/action/time
 - **Withdrawals** — Agent-initiated with mandatory operator approval
+- **Internal billing API** — Reserve/settle/release flow for service-to-service billing (e.g., per-request LLM costs)
+- **Internal auth** — Shared secret token via `X-Internal-Token` header with constant-time comparison
 
 ## Quick Start
 
@@ -54,6 +56,7 @@ The service starts on `http://localhost:3000` with `WALLET_BACKEND=simulated` by
 | `CASHU_THRESHOLD_MSAT` | No | `1000000` | Auto-routing: below threshold uses Cashu |
 | `OPERATOR_WEBHOOK_URL` | No | — | Webhook URL for operator notifications |
 | `OPERATOR_WEBHOOK_SECRET` | No | — | HMAC-SHA256 secret for webhook signing |
+| `VAULT_INTERNAL_TOKEN` | No | — | Shared secret (min 32 chars) for internal billing API |
 
 ## Wallet Backends
 
@@ -90,6 +93,16 @@ All routes use JSON. Agent routes require a bearer token from registration. Oper
 | `GET` | `/agents/:id/history` | Get payment history |
 | `GET` | `/agents/:id/payments/:txId` | Get payment status |
 | `POST` | `/agents/:id/withdrawals` | Propose a withdrawal |
+
+### Internal Billing Endpoints
+
+Requires `VAULT_INTERNAL_TOKEN` to be configured. Authenticated via `X-Internal-Token` header.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/internal/reserve` | Reserve funds against an agent balance |
+| `POST` | `/internal/settle` | Settle a reservation (deduct actual cost) |
+| `POST` | `/internal/release` | Release an unused reservation |
 
 ### Health
 
