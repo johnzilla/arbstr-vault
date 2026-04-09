@@ -4,7 +4,7 @@ import { config } from '../config.js';
 
 /**
  * Fastify onRequest hook for admin authentication.
- * Validates Bearer token against VAULTWARDEN_ADMIN_TOKEN using constant-time comparison.
+ * Validates Bearer token against VAULT_ADMIN_TOKEN using constant-time comparison.
  * Returns 401 on any failure (missing header, malformed, wrong token).
  */
 export async function adminAuth(request: FastifyRequest, reply: FastifyReply): Promise<void> {
@@ -21,7 +21,7 @@ export async function adminAuth(request: FastifyRequest, reply: FastifyReply): P
   // Constant-time comparison against admin token
   try {
     const providedBuf = Buffer.from(provided, 'utf8');
-    const expectedBuf = Buffer.from(config.VAULTWARDEN_ADMIN_TOKEN, 'utf8');
+    const expectedBuf = Buffer.from(config.VAULT_ADMIN_TOKEN, 'utf8');
 
     // If lengths differ, pad both to same length but still return false
     if (providedBuf.length !== expectedBuf.length) {

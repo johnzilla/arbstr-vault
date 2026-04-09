@@ -15,7 +15,7 @@ const MIGRATIONS_FOLDER = join(__dirname, '../../src/db/migrations');
 const TEST_ADMIN_TOKEN = 'test-admin-token-for-integration-tests-only';
 
 // Override environment before config is evaluated
-process.env.VAULTWARDEN_ADMIN_TOKEN = TEST_ADMIN_TOKEN;
+process.env.VAULT_ADMIN_TOKEN = TEST_ADMIN_TOKEN;
 process.env.NODE_ENV = 'test';
 
 function createTestDb() {

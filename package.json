@@ -1,5 +1,5 @@
 {
-  "name": "vaultwarden",
+  "name": "arbstr-vault",
   "version": "1.0.0",
   "description": "",
   "type": "module",
@@ -14,15 +14,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/johnzilla/vaultwarden.git"
+    "url": "git+https://github.com/johnzilla/arbstr-vault.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/johnzilla/vaultwarden/issues"
+    "url": "https://github.com/johnzilla/arbstr-vault/issues"
   },
-  "homepage": "https://github.com/johnzilla/vaultwarden#readme",
+  "homepage": "https://github.com/johnzilla/arbstr-vault#readme",
   "dependencies": {
     "@cashu/cashu-ts": "^3.5.0",
     "@fastify/bearer-auth": "^10.1.2",

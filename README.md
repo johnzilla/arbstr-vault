@@ -1,4 +1,4 @@
-# Vaultwarden — Agent Treasury Service
+# arbstr-vault — Agent Treasury Service
 
 A centralized treasury service that acts as a "bank" for AI agents. Holds all wallet keys, connects to Lightning (LND) and Cashu (self-hosted Nutshell mint) payment rails, manages per-agent sub-accounts with policy enforcement, and provides an auditable record of all economic actions.
 
@@ -27,7 +27,7 @@ npm install
 
 # Copy environment template
 cp .env.example .env
-# Edit .env — set VAULTWARDEN_ADMIN_TOKEN (min 32 chars)
+# Edit .env — set VAULT_ADMIN_TOKEN (min 32 chars)
 
 # Run database migrations
 npm run db:migrate
@@ -42,8 +42,8 @@ The service starts on `http://localhost:3000` with `WALLET_BACKEND=simulated` by
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `VAULTWARDEN_ADMIN_TOKEN` | Yes | — | Admin bearer token (min 32 chars) |
-| `DATABASE_PATH` | No | `./vaultwarden.db` | SQLite database path |
+| `VAULT_ADMIN_TOKEN` | Yes | — | Admin bearer token (min 32 chars) |
+| `DATABASE_PATH` | No | `./arbstr-vault.db` | SQLite database path |
 | `PORT` | No | `3000` | HTTP server port |
 | `LOG_LEVEL` | No | `info` | Pino log level |
 | `NODE_ENV` | No | `development` | Environment |

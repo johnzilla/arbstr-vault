@@ -33,7 +33,7 @@ const TEST_AGENT_TOKEN = 'vtk_test_agent_token_for_billing_reserved';
 
 // Set env before config is parsed
 process.env.VAULT_INTERNAL_TOKEN = TEST_INTERNAL_TOKEN;
-process.env.VAULTWARDEN_ADMIN_TOKEN = TEST_ADMIN_TOKEN;
+process.env.VAULT_ADMIN_TOKEN = TEST_ADMIN_TOKEN;
 process.env.NODE_ENV = 'test';
 
 function buildTestApp() {

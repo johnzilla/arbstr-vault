@@ -91,7 +91,7 @@ describe('internalAuth middleware', () => {
     vi.resetModules();
 
     // Re-import after clearing the env var
-    process.env.VAULTWARDEN_ADMIN_TOKEN = 'test-admin-token-that-is-long-enough-32c';
+    process.env.VAULT_ADMIN_TOKEN = 'test-admin-token-that-is-long-enough-32c';
     const { internalAuth } = await import('../../src/middleware/internalAuth.js');
 
     const request = { headers: { 'x-internal-token': 'some-token-value-here-long-enough' } } as any;
