@@ -15,7 +15,7 @@ async function deliverWithRetry(url: string, payload: string, sig: string): Prom
     try {
       const res = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Vaultwarden-Signature': sig },
+        headers: { 'Content-Type': 'application/json', 'X-ArbstrVault-Signature': sig },
         body: payload,
         signal: AbortSignal.timeout(10_000),
       });
