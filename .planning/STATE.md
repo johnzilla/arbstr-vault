@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-04-02)
 Phase: 06
 Plan: Not started
 Status: Phase complete — ready for verification
-Last activity: 2026-04-18 - Completed quick task 260418-nt5: finish vaultwarden rename — webhook header + active docs
+Last activity: 2026-04-18 - Addressed Dependabot security findings: merged PR #1 + bumped fastify 5.8.5 and protobufjs 7.5.5
 
 Progress: [██████████████░░░░░░] 67% (v1.0 complete, v1.1 starting)
 
@@ -83,7 +83,7 @@ None yet.
 
 ### Blockers/Concerns
 
-None yet.
+- `drizzle-kit <0.18.1` (dev-only migration tooling) still flags 4 transitive advisories in the esbuild chain. Deferred — requires a semver-major bump worth testing separately. 1 open Dependabot alert reflects this.
 
 ### Quick Tasks Completed
 
@@ -93,6 +93,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-18T21:12:22.000Z
-Stopped at: Completed quick task 260418-nt5 + README webhook documentation (6 commits pushed to origin/main)
+Last session: 2026-04-18T19:53:35.000Z
+Stopped at: Dependabot security sweep — closed 9 of 10 advisories (1 critical protobufjs + 4 high fastify/drizzle-orm/picomatch/vite + 5 moderate). 1 remaining: dev-only drizzle-kit chain (deferred).
 Resume file: None
