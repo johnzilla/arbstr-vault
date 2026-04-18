@@ -4,6 +4,12 @@ A centralized treasury service that acts as a "bank" for AI agents. Holds all wa
 
 Built for personal use — the sole customer is the operator plus their own agents.
 
+## How this fits in
+
+arbstr-vault is the treasury half of the [arbstr](https://github.com/johnzilla/arbstr) inference marketplace. arbstr core routes LLM requests to the cheapest qualified provider and calls vault's `/internal/reserve → settle|release` endpoints per request to meter spend against agent sub-accounts. Vault is also usable standalone as a personal agent bank — nothing in this repo depends on arbstr code.
+
+To run the full stack (core + vault + LND + Cashu mint) with a single `docker compose up`, see [arbstr-node](https://github.com/johnzilla/arbstr-node).
+
 ## Features
 
 - **Agent sub-accounts** — Register agents with isolated balances and bearer token auth
