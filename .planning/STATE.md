@@ -94,5 +94,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-04-18T21:12:22.000Z
-Stopped at: Completed quick task 260418-nt5 (finished vaultwarden rename — webhook header + 6 active docs)
+Stopped at: Completed quick task 260418-nt5 + README webhook documentation (6 commits pushed to origin/main)
 Resume file: None
