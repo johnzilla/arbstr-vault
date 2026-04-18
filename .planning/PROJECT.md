@@ -1,4 +1,4 @@
-# Agent Treasury Service (Vaultwarden)
+# Agent Treasury Service (arbstr-vault)
 
 ## What This Is
 

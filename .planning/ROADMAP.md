@@ -1,4 +1,4 @@
-# Roadmap: Agent Treasury Service (Vaultwarden)
+# Roadmap: Agent Treasury Service (arbstr-vault)
 
 ## Milestones
 
