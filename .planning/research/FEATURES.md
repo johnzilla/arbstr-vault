@@ -171,7 +171,7 @@ There are no direct competitors for a self-hosted personal-use agent treasury. T
 | Key custody | Keys on LND node | Keys on LND node | HSM / MPC key management | All keys in treasury service; agents never see keys |
 | Simulated spend mode | No | No | Sandbox environment (separate) | Per-agent sim flag; same API, no real money movement |
 
-**Key design principle from this analysis:** Existing tools (LND Accounts, LndHub) solve balance isolation at the Lightning node level but don't provide the policy engine, multi-rail routing, or audit depth needed. Fireblocks/BitGo provide those features but are enterprise-only and don't support Lightning/Cashu. Vaultwarden fills the gap: Lightning-native, self-hosted, policy-rich, agent-centric.
+**Key design principle from this analysis:** Existing tools (LND Accounts, LndHub) solve balance isolation at the Lightning node level but don't provide the policy engine, multi-rail routing, or audit depth needed. Fireblocks/BitGo provide those features but are enterprise-only and don't support Lightning/Cashu. arbstr-vault fills the gap: Lightning-native, self-hosted, policy-rich, agent-centric.
 
 ## Sources
 
@@ -189,5 +189,5 @@ There are no direct competitors for a self-hosted personal-use agent treasury. T
 - Proxy AI agent payments landscape 2026 — https://www.useproxy.ai/blog/ai-agent-payments-landscape-2026 (LOW confidence — could not fetch; claims from search snippet only)
 
 ---
-*Feature research for: Agent Treasury / Payment Custody Service (Vaultwarden)*
+*Feature research for: Agent Treasury / Payment Custody Service (arbstr-vault)*
 *Researched: 2026-02-26*

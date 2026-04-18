@@ -1,13 +1,13 @@
 # Project Research Summary
 
-**Project:** Vaultwarden — Agent Treasury Service
+**Project:** arbstr-vault — Agent Treasury Service
 **Domain:** Payment custody service for AI agents (Lightning Network + Cashu ecash)
 **Researched:** 2026-02-26
 **Confidence:** MEDIUM-HIGH
 
 ## Executive Summary
 
-Vaultwarden is a self-hosted payment custody and policy-enforcement service for AI agents, combining two payment rails — Lightning Network (BOLT11) and Cashu ecash — behind a single HTTP API that agents consume. Research confirms this is an emerging but well-scoped problem: no existing tool (LND Accounts, LndHub, Fireblocks) provides the combination of policy enforcement, multi-rail routing, and agent-centric API that this project requires. The recommended approach is a TypeScript/Node.js monolith using Fastify, Drizzle ORM, and PostgreSQL, with LND for Lightning and a self-hosted Nutshell mint for Cashu — all wired together with a custom pure-TypeScript policy engine. The architecture is internally a layered monolith: API layer calls Policy Engine calls Ledger; wallet backends (Lightning, Cashu, Simulated) sit behind a common trait/interface and are swappable without touching the policy or ledger layers.
+arbstr-vault is a self-hosted payment custody and policy-enforcement service for AI agents, combining two payment rails — Lightning Network (BOLT11) and Cashu ecash — behind a single HTTP API that agents consume. Research confirms this is an emerging but well-scoped problem: no existing tool (LND Accounts, LndHub, Fireblocks) provides the combination of policy enforcement, multi-rail routing, and agent-centric API that this project requires. The recommended approach is a TypeScript/Node.js monolith using Fastify, Drizzle ORM, and PostgreSQL, with LND for Lightning and a self-hosted Nutshell mint for Cashu — all wired together with a custom pure-TypeScript policy engine. The architecture is internally a layered monolith: API layer calls Policy Engine calls Ledger; wallet backends (Lightning, Cashu, Simulated) sit behind a common trait/interface and are swappable without touching the policy or ledger layers.
 
 The build order is dictated by safety: the audit log and double-entry sub-account ledger must exist before any payment logic is written on top of them. Milestone 1 should deliver a fully functional API and policy engine backed by a simulated wallet — all money-movement contracts exercised with zero real funds. This is not a compromise; it is the architecturally correct order because the policy engine, ledger, and audit log are the value of the system, not the Lightning wire protocol. Real Lightning and Cashu backends are drop-in replacements at Milestone 2 and 3 respectively.
 

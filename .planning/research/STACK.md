@@ -181,5 +181,5 @@ npm install -D typescript vitest tsx drizzle-kit @types/node pino-pretty
 
 ---
 
-*Stack research for: Agent Treasury Service (Vaultwarden) — Lightning/Cashu payment custody for AI agents*
+*Stack research for: Agent Treasury Service (arbstr-vault) — Lightning/Cashu payment custody for AI agents*
 *Researched: 2026-02-26*

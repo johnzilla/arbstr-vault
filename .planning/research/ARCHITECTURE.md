@@ -362,5 +362,5 @@ The component dependency graph dictates build order:
 - Cashu CDK GitHub (HIGH confidence — official source): https://github.com/cashubtc/nutshell
 
 ---
-*Architecture research for: Agent Treasury Service (Vaultwarden)*
+*Architecture research for: Agent Treasury Service (arbstr-vault)*
 *Researched: 2026-02-26*
