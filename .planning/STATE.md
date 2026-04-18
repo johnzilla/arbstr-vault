@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-04-02)
 Phase: 06
 Plan: Not started
 Status: Phase complete — ready for verification
-Last activity: 2026-04-03
+Last activity: 2026-04-18 - Completed quick task 260418-nt5: finish vaultwarden rename — webhook header + active docs
 
 Progress: [██████████████░░░░░░] 67% (v1.0 complete, v1.1 starting)
 
@@ -85,8 +85,14 @@ None yet.
 
 None yet.
 
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260418-nt5 | finish vaultwarden rename — webhook header + active docs | 2026-04-18 | d0764fa | [260418-nt5-finish-vaultwarden-rename-webhook-header](./quick/260418-nt5-finish-vaultwarden-rename-webhook-header/) |
+
 ## Session Continuity
 
-Last session: 2026-04-03T01:16:15.099Z
-Stopped at: Completed 06-02-PLAN.md (settle + release integration tests, 22 tests passing)
+Last session: 2026-04-18T21:12:22.000Z
+Stopped at: Completed quick task 260418-nt5 (finished vaultwarden rename — webhook header + 6 active docs)
 Resume file: None
