@@ -116,6 +116,16 @@ Requires `VAULT_INTERNAL_TOKEN` to be configured. Authenticated via `X-Internal-
 |--------|------|-------------|
 | `GET` | `/health` | Service health check |
 
+### Webhooks
+
+When `OPERATOR_WEBHOOK_URL` is set, arbstr-vault POSTs JSON events (balance alerts, approval state changes, etc.) to that URL.
+
+- **Header:** `X-ArbstrVault-Signature` — hex HMAC-SHA256 of the raw request body using `OPERATOR_WEBHOOK_SECRET`. If no secret is configured, the value is the literal string `unsigned`.
+- **Payload:** JSON with `event`, optional `agent_id`/`transaction_id`/`amount_msat`, plus a `timestamp` (ms since epoch).
+- **Delivery:** fire-and-forget with 3 retries (1s, 5s, 15s backoff) and a 10s per-attempt timeout. Failures are recorded to the audit log.
+
+> **Breaking change (2026-04-18):** the signature header was renamed from `X-Vaultwarden-Signature` to `X-ArbstrVault-Signature`. Update any consumer that asserts on the header name.
+
 ## Development
 
 ```bash
