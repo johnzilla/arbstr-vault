@@ -45,7 +45,7 @@ async function main() {
 
   try {
     await app.listen({ port: config.PORT, host: '0.0.0.0' });
-    app.log.info(`Vaultwarden started on port ${config.PORT} (wallet: ${config.WALLET_BACKEND})`);
+    app.log.info(`arbstr-vault started on port ${config.PORT} (wallet: ${config.WALLET_BACKEND})`);
   } catch (err) {
     app.log.error(err);
     process.exit(1);
