@@ -4,6 +4,17 @@ A centralized treasury service that acts as a "bank" for AI agents. Holds all wa
 
 Built for personal use — the sole customer is the operator plus their own agents.
 
+> [!CAUTION]
+> **DANGER**
+>
+> This project is experimental and under active development. It is **not hardened, audited, or production-ready**.
+>
+> Storing credentials, tokens and keys to financial resources involves **real financial risk**. Misconfiguration, bugs, or incomplete understanding can result in **permanent loss of funds**.
+>
+> Do **not** use this software with real money unless you fully understand the transaction end-to-end, have reviewed the code, and are prepared to lose all funds involved.
+>
+> **You are solely responsible for any loss of funds.**
+
 ## How this fits in
 
 arbstr-vault is the treasury half of the [arbstr](https://github.com/johnzilla/arbstr) inference marketplace. arbstr core routes LLM requests to the cheapest qualified provider and calls vault's `/internal/reserve → settle|release` endpoints per request to meter spend against agent sub-accounts. Vault is also usable standalone as a personal agent bank — nothing in this repo depends on arbstr code.
