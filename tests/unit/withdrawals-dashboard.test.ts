@@ -1,10 +1,10 @@
 /**
- * Withdrawals, Balance Alerts, and Dashboard tests (Plan 04-03)
+ * Withdrawals, Balance Alerts, and Dashboard tests
  *
  * Validates:
- * - PAY-07: Agent can propose withdrawal via POST /agents/:id/withdrawals
- * - OBSV-06: Balance alert fires when balance drops below configured floor with cooldown
- * - OBSV-07: GET /operator/dashboard returns complete per-agent snapshot
+ * - Agent can propose withdrawal via POST /agents/:id/withdrawals
+ * - Balance alert fires when balance drops below configured floor with cooldown
+ * - GET /operator/dashboard returns complete per-agent snapshot
  * - Withdrawal policy check prevents over-limit withdrawals from entering queue
  * - Dashboard includes all required fields: balance, daily spend, utilization, policy, pending count, last payment, floor alert
  */
@@ -69,7 +69,7 @@ async function deposit(app: FastifyInstance, agentId: string, amountMsat: number
   expect(res.statusCode).toBe(200);
 }
 
-// Helper: configure policy with full Phase 4 fields
+// Helper: configure policy including approval and alert fields
 async function setPolicy(
   app: FastifyInstance,
   agentId: string,
@@ -139,7 +139,7 @@ async function submitWithdrawal(
 // Withdrawal tests
 // ============================================================================
 
-describe('Withdrawal endpoint (PAY-07)', () => {
+describe('Withdrawal endpoint', () => {
   // Test 1: POST /agents/:id/withdrawals with valid BOLT11 returns PENDING_APPROVAL
   it('returns PENDING_APPROVAL for valid withdrawal request', async () => {
     const { app } = buildTestApp();
@@ -234,7 +234,7 @@ describe('Withdrawal endpoint (PAY-07)', () => {
 // Balance alert tests
 // ============================================================================
 
-describe('Balance alert service (OBSV-06)', () => {
+describe('Balance alert service', () => {
   beforeEach(() => {
     // Reset cooldowns between tests to prevent interference
     alertsService._resetCooldowns();
@@ -366,7 +366,7 @@ describe('Balance alert service (OBSV-06)', () => {
 // Dashboard tests
 // ============================================================================
 
-describe('Operator dashboard (OBSV-07)', () => {
+describe('Operator dashboard', () => {
   // Test 8: GET /operator/dashboard returns per-agent snapshot
   it('returns per-agent snapshot with all required fields', async () => {
     const { app } = buildTestApp();

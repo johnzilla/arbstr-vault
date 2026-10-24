@@ -1,9 +1,9 @@
 /**
- * Policy versioning tests (Plan 04-01)
+ * Policy versioning tests
  *
  * Validates:
- * - PLCY-08: Policy changes create new version rows (append-only)
- * - PLCY-09: Payment evaluation reads policy version at request timestamp (point-in-time)
+ * - Policy changes create new version rows (append-only)
+ * - Payment evaluation reads policy version at request timestamp (point-in-time)
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
@@ -67,7 +67,7 @@ async function patchPolicy(
   return res;
 }
 
-describe('Policy versioning (PLCY-08, PLCY-09)', () => {
+describe('Policy versioning', () => {
   // Test 1: PATCH /operator/agents/:id/policy creates new versions
   it('creates version 1 on first PATCH, version 2 on second PATCH', async () => {
     const { app, db } = buildTestApp();
@@ -97,7 +97,7 @@ describe('Policy versioning (PLCY-08, PLCY-09)', () => {
     expect(body2.policy.max_transaction_msat).toBe(200_000);
   });
 
-  // Test 2: Point-in-time policy evaluation (PLCY-09)
+  // Test 2: Point-in-time policy evaluation
   it('payment uses the policy version effective at request time', async () => {
     const { app, db } = buildTestApp();
     await app.ready();
@@ -177,7 +177,7 @@ describe('Policy versioning (PLCY-08, PLCY-09)', () => {
     expect(body.policy.daily_limit_msat).toBe(5_000_000);
   });
 
-  // Test 5: Policy versioning preserves all fields including new Phase 4 fields
+  // Test 5: Policy versioning preserves all fields including approval and alert fields
   it('policy version preserves approval_timeout_ms, alert_floor_msat, alert_cooldown_ms', async () => {
     const { app, db } = buildTestApp();
     await app.ready();

@@ -519,7 +519,7 @@ describe('Crash recovery — getPendingLightningPayments', () => {
 // Macaroon scope verification
 // ---------------------------------------------------------------------------
 
-describe('verifyMacaroonScope — SEC-05', () => {
+describe('verifyMacaroonScope', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });

@@ -162,7 +162,7 @@ export const agentsRepo = {
 
 /**
  * Repository for append-only policy versioning.
- * Supports point-in-time lookups (PLCY-09) and version history (PLCY-08).
+ * Supports point-in-time lookups and version history.
  */
 export const policyVersionsRepo = {
   /**
@@ -180,7 +180,7 @@ export const policyVersionsRepo = {
   },
 
   /**
-   * Point-in-time policy version lookup (PLCY-09).
+   * Point-in-time policy version lookup.
    * Returns the version whose effective_from <= timestamp, ordered by most recent.
    * Returns null if no version was effective at that timestamp.
    */

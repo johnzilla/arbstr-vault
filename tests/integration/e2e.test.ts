@@ -1,7 +1,7 @@
 /**
- * Full lifecycle end-to-end test (Plan 05)
+ * Full lifecycle end-to-end test
  *
- * Exercises the ENTIRE Phase 1 API in sequence, validating all 5 ROADMAP success criteria:
+ * Exercises the core agent/operator API in sequence, validating 5 success criteria:
  *
  * SC-1: Operator registers agent, receives agent_id + bearer token
  * SC-2: Agent submits payment, receives simulated response with policy decision and tx ref
@@ -39,7 +39,7 @@ function buildTestApp() {
 }
 
 describe('Complete payment lifecycle end-to-end', () => {
-  it('validates all 5 Phase 1 success criteria in a single sequential test', async () => {
+  it('validates all 5 success criteria in a single sequential test', async () => {
     const app = buildTestApp();
     await app.ready();
 
@@ -354,7 +354,7 @@ describe('Complete payment lifecycle end-to-end', () => {
     }
 
     // ----------------------------------------------------------------
-    // Step 13: View agent details (AGNT-05: includes metadata and policy snapshot)
+    // Step 13: View agent details (includes metadata and policy snapshot)
     // ----------------------------------------------------------------
     {
       const res = await app.inject({

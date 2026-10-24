@@ -4,7 +4,7 @@ import { config } from '../config.js';
  * Pino logger configuration with token redaction.
  *
  * Redacts sensitive credential fields before log serialization to prevent
- * bearer tokens from appearing in log output (SEC-05, OBSV-05).
+ * bearer tokens from appearing in log output.
  *
  * Redacted paths:
  * - req.headers.authorization — the HTTP Authorization header containing vtk_ tokens

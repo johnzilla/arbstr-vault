@@ -33,7 +33,9 @@ export interface PolicyContext {
  * Returns DENY for: null policy, deny-all policy, over-limit, insufficient balance, any internal error.
  * Never throws — all errors are caught and converted to DENY.
  *
- * REQUIRE_HUMAN_APPROVAL is a valid outcome type reserved for Phase 4 escalation paths.
+ * Returns REQUIRE_HUMAN_APPROVAL instead of DENY when the amount exceeds max_transaction_msat
+ * and approval_timeout_ms is configured: /pay routes it to the approvals queue, while
+ * /internal/reserve treats it as a deny.
  */
 export function evaluatePolicy(
   policy: PolicyConfig | null,

@@ -3,7 +3,7 @@ import type { WalletBackend, PaymentRequest, PaymentResult } from './wallet.inte
 /**
  * SimulatedWallet — implements WalletBackend with deterministic success.
  * Always returns SETTLED with mode 'simulated'.
- * No randomized failures in Phase 1 (per CONTEXT.md).
+ * No randomized failures — results are deterministic for testing.
  * When Lightning is live, the LND wallet will return mode 'lightning'.
  */
 export const simulatedWallet: WalletBackend = {

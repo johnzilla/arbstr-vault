@@ -1,5 +1,5 @@
 /**
- * Unit tests for internal auth middleware (Plan 05-01)
+ * Unit tests for internal auth middleware
  *
  * Tests the internalAuth Fastify onRequest hook which validates X-Internal-Token header.
  */

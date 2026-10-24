@@ -27,16 +27,18 @@ To run the full stack (core + vault + LND + Cashu mint) with a single `docker co
 - **Policy engine** — Per-agent max transaction, daily spend limits, fail-closed DENY on error
 - **Lightning payments** — Pay BOLT11 invoices via LND with correct state machine and crash recovery
 - **Cashu hot wallet** — Self-hosted Nutshell mint with automatic Lightning/Cashu rail routing
-- **Human approval** — Over-limit transactions enter a pending queue with configurable timeout
+- **Human approval** — Over-limit `/pay` requests enter a pending queue with a configurable timeout
 - **Versioned policies** — Append-only policy history with point-in-time evaluation
 - **Balance alerts** — Per-agent floor threshold with webhook notification and cooldown
 - **Operator dashboard** — All agents, balances, spend, utilization, policy state in one call
-- **Audit log** — Append-only, atomic with every ledger update, filterable by agent/action/time
+- **Audit log** — Append-only and written atomically with every ledger update. Agents read their own history via `/agents/:id/history`
 - **Withdrawals** — Agent-initiated with mandatory operator approval
-- **Internal billing API** — Reserve/settle/release flow for service-to-service billing (e.g., per-request LLM costs)
+- **Internal billing API** — Reserve/settle/release flow for service-to-service billing (e.g., per-request LLM costs), with policy enforcement and automatic release of stale reservations
 - **Internal auth** — Shared secret token via `X-Internal-Token` header with constant-time comparison
 
 ## Quick Start
+
+Requires **Node.js 22** (see `.nvmrc`). `better-sqlite3` does not build on newer majors.
 
 ```bash
 # Install dependencies
@@ -44,12 +46,9 @@ npm install
 
 # Copy environment template
 cp .env.example .env
-# Edit .env — set VAULT_ADMIN_TOKEN (min 32 chars)
+# Edit .env — set VAULT_ADMIN_TOKEN (min 32 chars; e.g. openssl rand -hex 32)
 
-# Run database migrations
-npm run db:migrate
-
-# Start in simulated mode (no real funds)
+# Start in simulated mode (no real funds). Migrations run automatically on start.
 npm run dev
 ```
 
@@ -81,7 +80,7 @@ The service starts on `http://localhost:3000` with `WALLET_BACKEND=simulated` by
 - **`simulated`** — No real funds. Identical API surface. Use for development and testing.
 - **`lightning`** — Pay BOLT11 invoices via LND. Requires LND connection vars.
 - **`cashu`** — Mint/melt Cashu tokens via self-hosted Nutshell. Requires `CASHU_MINT_URL`.
-- **`auto`** — Dual-rail. Routes automatically based on amount and destination. Requires both Lightning and Cashu vars.
+- **`auto`** — Dual-rail. Payments below `CASHU_THRESHOLD_MSAT` go over Cashu, the rest over Lightning; a request's `preferred_rail` overrides this, and a failed rail falls back to the other. Requires both Lightning and Cashu vars.
 
 ## API
 
@@ -95,12 +94,14 @@ All routes use JSON. Agent routes require a bearer token from registration. Oper
 | `GET` | `/agents` | List all agents |
 | `GET` | `/agents/:id` | Get agent details and policy |
 | `PATCH` | `/operator/agents/:id/policy` | Update agent policy (creates new version) |
-| `PUT` | `/agents/:id/policy` | Replace agent policy (legacy) |
+| `PUT` | `/agents/:id/policy` | Replace agent policy (legacy; resets optional fields) |
 | `POST` | `/agents/:id/deposit` | Deposit funds to agent |
-| `POST` | `/operator/approvals/:id/approve` | Approve a pending payment |
-| `POST` | `/operator/approvals/:id/deny` | Deny a pending payment |
-| `GET` | `/operator/approvals` | List pending approvals |
+| `POST` | `/operator/approvals/:id/approve` | Approve a pending payment or withdrawal |
+| `POST` | `/operator/approvals/:id/deny` | Deny a pending payment or withdrawal |
+| `GET` | `/operator/approvals` | List approvals (`?status=pending` or `all`) |
 | `GET` | `/operator/dashboard` | Full agent dashboard |
+
+New agents start with a deny-all policy. The policy body takes `max_transaction_msat` and `daily_limit_msat`, plus optional `max_fee_msat`, `approval_timeout_ms` (30s–1h, default 5 min), `alert_floor_msat` and `alert_cooldown_ms` (min 60s) for balance alerts.
 
 ### Agent Endpoints
 
@@ -109,8 +110,10 @@ All routes use JSON. Agent routes require a bearer token from registration. Oper
 | `POST` | `/agents/:id/pay` | Submit a payment request |
 | `GET` | `/agents/:id/balance` | Get agent balance |
 | `GET` | `/agents/:id/history` | Get payment history |
-| `GET` | `/agents/:id/payments/:txId` | Get payment status |
+| `GET` | `/agents/:id/payments/:tx_id` | Get payment status |
 | `POST` | `/agents/:id/withdrawals` | Propose a withdrawal |
+
+Agent tokens start with `vtk_` and only work for their own `:id` (another agent's id returns 403).
 
 ### Internal Billing Endpoints
 
@@ -150,11 +153,12 @@ Settlement rules:
 
 ### Webhooks
 
-When `OPERATOR_WEBHOOK_URL` is set, arbstr-vault POSTs JSON events (balance alerts, approval state changes, etc.) to that URL.
+When `OPERATOR_WEBHOOK_URL` is set, arbstr-vault POSTs JSON events to that URL.
 
+- **Events:** `approval_required`, `approval_granted`, `approval_denied`, `approval_timeout`, `withdrawal_requested`, `balance_alert`.
 - **Header:** `X-ArbstrVault-Signature` — hex HMAC-SHA256 of the raw request body using `OPERATOR_WEBHOOK_SECRET`. If no secret is configured, the value is the literal string `unsigned`.
-- **Payload:** JSON with `event`, optional `agent_id`/`transaction_id`/`amount_msat`, plus a `timestamp` (ms since epoch).
-- **Delivery:** fire-and-forget with 3 retries (1s, 5s, 15s backoff) and a 10s per-attempt timeout. Failures are recorded to the audit log.
+- **Payload:** JSON with `event`, optional `agent_id`/`transaction_id`/`amount_msat`, plus a `timestamp` (ms since epoch). `approval_granted` adds `payment_status`; `balance_alert` adds `balance_msat` and `alert_floor_msat`.
+- **Delivery:** fire-and-forget with 3 retries (1s, 5s, 15s backoff) and a 10s per-attempt timeout. A delivery that fails every attempt is dropped; it is not recorded anywhere.
 
 > **Breaking change (2026-04-18):** the signature header was renamed from `X-Vaultwarden-Signature` to `X-ArbstrVault-Signature`. Update any consumer that asserts on the header name.
 
@@ -198,7 +202,7 @@ See comments in `docker-compose.dev.yml` for manual channel setup steps.
 
 | Component | Technology |
 |-----------|-----------|
-| Runtime | Node.js (ESM) |
+| Runtime | Node.js 22 (ESM) |
 | Framework | Fastify 5 |
 | Language | TypeScript 5.9 |
 | Database | SQLite via better-sqlite3 |
@@ -211,4 +215,4 @@ See comments in `docker-compose.dev.yml` for manual channel setup steps.
 
 ## License
 
-ISC
+MIT

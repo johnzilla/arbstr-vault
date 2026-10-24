@@ -35,7 +35,7 @@ export class LightningStreamError extends Error {
  * On 'error' (gRPC stream disconnect): rejects with LightningStreamError.
  * The caller (payments.service.ts) must keep ledger in PENDING state on stream error.
  *
- * Anti-patterns avoided (per RESEARCH.md):
+ * Anti-patterns avoided:
  * - Does NOT use payViaPaymentRequest (blocks, no 'paying' event)
  * - Does NOT treat 'error' as payment failure (would cause false refunds)
  * - Does NOT do async DB write in 'paying' handler (regtest emits 'confirmed' synchronously after 'paying')
@@ -52,9 +52,9 @@ export class LightningWallet implements WalletBackend {
     const maxFeeMsat = req.max_fee_msat ?? 1000;
 
     return new Promise<PaymentResult>((resolve, reject) => {
-      // Track payment_hash synchronously in memory (Pitfall 2 from RESEARCH.md:
-      // regtest can emit 'confirmed' synchronously after 'paying', so we must NOT
-      // await any async operation in the 'paying' handler — store hash in closure instead)
+      // Track payment_hash synchronously in memory: regtest can emit 'confirmed'
+      // synchronously after 'paying', so we must NOT await any async operation in
+      // the 'paying' handler — store hash in closure instead
       let paymentHashInMemory: string | undefined;
 
       const sub = subscribeToPayViaRequest({
@@ -109,7 +109,7 @@ export class LightningWallet implements WalletBackend {
         });
       });
 
-      // gRPC stream error — NOT a payment failure (Pitfall 1 from RESEARCH.md)
+      // gRPC stream error — NOT a payment failure
       // The payment may still be in-flight on the Lightning network.
       // Reject with LightningStreamError so the caller can:
       //   1. Keep the ledger in PENDING state (no RELEASE entry)

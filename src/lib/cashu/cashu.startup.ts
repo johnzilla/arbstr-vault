@@ -27,7 +27,7 @@ export async function initializeCashuBackend(db: Db): Promise<WalletBackend> {
   // ---------------------------------------------------------------------------
   // Step 1: Create and initialize CashuClient
   // loadMint() makes the initial network call to fetch mint info, keysets, and keys.
-  // MUST be called before any other operation (Pitfall 5: constructor makes no network calls).
+  // MUST be called before any other operation (the constructor makes no network calls).
   // ---------------------------------------------------------------------------
   const client = new CashuClient(config.CASHU_MINT_URL!);
   await client.initialize();

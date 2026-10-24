@@ -21,7 +21,7 @@ type Db = BetterSQLite3Database<Record<string, never>>;
  * 6. On failure: release lock, restore proofs back to pool, return FAILED
  *
  * The synchronous select + lock + delete (step 3) is the Cashu equivalent of the
- * Lightning RESERVE pattern from Phase 2. It prevents concurrent double-spend of
+ * Lightning RESERVE pattern in payments.service.ts. It prevents concurrent double-spend of
  * the same proofs by using the UNIQUE constraint on cashu_pending.secret.
  *
  * IMPORTANT: Cashu amounts are in SATS, not msats.
@@ -55,7 +55,7 @@ export class CashuWalletBackend implements WalletBackend {
       };
     }
 
-    // Total needed in sat: invoice amount + fee_reserve (Pitfall 2 from RESEARCH.md)
+    // Total needed in sat: invoice amount + fee_reserve (amount alone is not enough to melt)
     const totalNeededSat = meltQuote.amount + meltQuote.fee_reserve;
 
     // -----------------------------------------------------------------------
@@ -74,7 +74,7 @@ export class CashuWalletBackend implements WalletBackend {
 
     // -----------------------------------------------------------------------
     // Step 3: Select proofs + lock + delete — all inside a single synchronous
-    // better-sqlite3 transaction (Pitfall 3 from RESEARCH.md)
+    // better-sqlite3 transaction (callbacks must be synchronous — no await inside)
     // -----------------------------------------------------------------------
     let selectedProofs: Array<{ id: string; keyset_id: string; amount: number; secret: string; C: string }>;
     let lockSucceeded = false;

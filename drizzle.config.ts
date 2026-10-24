@@ -4,4 +4,6 @@ export default defineConfig({
   dialect: 'sqlite',
   schema: './src/db/schema.ts',
   out: './src/db/migrations',
+  // Same default as src/config.ts, so `npm run db:migrate` targets the server's database
+  dbCredentials: { url: process.env.DATABASE_PATH ?? './arbstr-vault.db' },
 });

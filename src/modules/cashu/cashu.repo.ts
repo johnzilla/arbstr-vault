@@ -41,7 +41,7 @@ export const cashuRepo = {
    * Throws if pool has insufficient total.
    *
    * NOTE: For melt operations, caller must pass targetSat = meltQuote.amount + meltQuote.fee_reserve.
-   * Do NOT pass only meltQuote.amount — fee_reserve must be included (Pitfall 2 in RESEARCH.md).
+   * Do NOT pass only meltQuote.amount — fee_reserve must be included or the melt will fail for insufficient proofs.
    */
   selectProofs(
     db: Db,

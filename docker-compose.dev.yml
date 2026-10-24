@@ -17,8 +17,9 @@
 #   export WALLET_BACKEND=lightning
 #   export LND_HOST=127.0.0.1
 #   export LND_PORT=10009
-#   export LND_CERT_BASE64=$(cat ./lnd-shared/alice/tls.cert | base64 -w 0)
-#   export LND_MACAROON_BASE64=$(cat ./lnd-shared/alice/treasury.macaroon | base64 -w 0)
+#   docker cp lnd-alice:/shared/alice/tls.cert . && docker cp lnd-alice:/shared/alice/treasury.macaroon .
+#   export LND_CERT_BASE64=$(base64 < tls.cert | tr -d "\n")
+#   export LND_MACAROON_BASE64=$(base64 < treasury.macaroon | tr -d "\n")
 #
 # For Cashu (dual-rail) mode, also set:
 #   export CASHU_MINT_URL=http://localhost:3338
@@ -40,7 +41,7 @@ volumes:
   bitcoind-data:
   lnd-alice-data:
   lnd-bob-data:
-  # Shared volume for TLS certs and baked macaroons — mounted by both LND nodes and the host
+  # Shared volume for TLS certs and baked macaroons — mounted by both LND nodes and the mint (named volume; copy files out with docker cp)
   lnd-shared:
 
 services:
@@ -193,9 +194,9 @@ services:
       MINT_BACKEND_BOLT11_SAT: LndRestWallet
       MINT_LND_REST_ENDPOINT: https://lnd-alice:8080
       # Macaroon and cert read from shared volume — same LND node as Treasury
-      # Note: Nutshell needs admin or invoice macaroon for its own Lightning backend.
-      # The scoped treasury.macaroon may not have enough permissions for the MINT's
-      # internal operations. For dev, use LND's default admin.macaroon.
+      # Note: Nutshell needs an admin or invoice macaroon for its own Lightning backend.
+      # This uses the scoped treasury.macaroon; if the mint lacks permissions, point
+      # MINT_LND_REST_MACAROON at LND's admin.macaroon for dev.
       # In production, bake a separate macaroon for the mint.
       MINT_LND_REST_CERT: /shared/alice/tls.cert
       MINT_LND_REST_MACAROON: /shared/alice/treasury.macaroon

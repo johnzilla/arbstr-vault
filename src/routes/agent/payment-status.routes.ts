@@ -47,7 +47,7 @@ export const agentPaymentStatusRoutes: FastifyPluginAsync = async (fastify) => {
   app.addHook('onRequest', agentAuth);
 
   // GET /agents/:id/payments/:tx_id — poll payment status
-  // PAY-06: Agent can see PENDING/SETTLED/FAILED with payment_hash and fee_msat
+  // Agent can see PENDING/SETTLED/FAILED with payment_hash and fee_msat
   app.get(
     '/agents/:id/payments/:tx_id',
     {
@@ -66,7 +66,7 @@ export const agentPaymentStatusRoutes: FastifyPluginAsync = async (fastify) => {
             fee_msat: z.number().optional(),
             created_at: z.string(),
             settled_at: z.string().optional(),
-            // Routing trace fields (Phase 3)
+            // Routing trace fields (dual-rail)
             cashu_token_id: z.string().optional(),
             initial_rail: z.enum(['lightning', 'cashu']).optional(),
             final_rail: z.enum(['lightning', 'cashu']).optional(),
@@ -145,7 +145,7 @@ export const agentPaymentStatusRoutes: FastifyPluginAsync = async (fastify) => {
       // Determine status using audit log (authoritative) + ledger entry types (fallback)
       let status: 'SETTLED' | 'PENDING' | 'FAILED' | 'PENDING_APPROVAL' = determinePaymentStatus(allEntries, auditActions);
 
-      // Disambiguate PENDING vs PENDING_APPROVAL (Research Pitfall 2).
+      // Disambiguate PENDING vs PENDING_APPROVAL — both carry a RESERVE entry.
       // A RESERVE entry with a pending_approvals row = awaiting human approval.
       // A RESERVE entry without one = Lightning in-flight PENDING.
       if (status === 'PENDING') {
@@ -184,7 +184,7 @@ export const agentPaymentStatusRoutes: FastifyPluginAsync = async (fastify) => {
       // Amount from initiating entry (stored as negative for debits)
       const amountMsat = Math.abs(initiatingEntry.amount_msat);
 
-      // Extract routing trace from PAYMENT_REQUEST audit metadata (Phase 3)
+      // Extract routing trace from PAYMENT_REQUEST audit metadata
       // The PAYMENT_REQUEST audit entry is written in Phase 1 of processPayment
       // and contains initial_rail, preferred_rail, and (on retry) fallback fields.
       // PAYMENT_SETTLED also contains final routing trace for the completed path.
@@ -215,7 +215,7 @@ export const agentPaymentStatusRoutes: FastifyPluginAsync = async (fastify) => {
         fee_msat: feeMsat,
         created_at: initiatingEntry.created_at.toISOString(),
         settled_at: settledAt,
-        // Routing trace (Phase 3) — only present when rails are known
+        // Routing trace — only present when rails are known
         cashu_token_id: cashuTokenId,
         initial_rail: initialRail as 'lightning' | 'cashu' | undefined,
         final_rail: finalRail as 'lightning' | 'cashu' | undefined,

@@ -200,7 +200,7 @@ export function createPaymentsService(walletOrOptions: WalletBackend | PaymentsS
             });
           }, { behavior: 'immediate' });
 
-          // Post-settlement balance alert check (OBSV-06)
+          // Post-settlement balance alert check
           alertsService.checkAndNotify(db as unknown as Db, agentId).catch(() => {});
 
           return { status: 'SETTLED' };
@@ -262,13 +262,13 @@ export function createPaymentsService(walletOrOptions: WalletBackend | PaymentsS
      * Process a payment request for an agent.
      *
      * Critical invariants:
-     * - All DB reads (balance, daily_spend) happen INSIDE the IMMEDIATE transaction — no TOCTOU (SEC-02)
-     * - Audit write is INSIDE the transaction — rollback on failure (OBSV-02)
+     * - All DB reads (balance, daily_spend) happen INSIDE the IMMEDIATE transaction — no TOCTOU
+     * - Audit write is INSIDE the transaction — rollback on failure
      * - better-sqlite3 requires synchronous transaction callbacks; wallet call happens
      *   outside the final commit but the ledger debit + audit are atomic with each other
      * - Fail-closed: any error returns DENY, never ALLOW, never throws
      *
-     * Lightning payment transaction structure (RESERVE/RELEASE pattern, SEC-04):
+     * Lightning payment transaction structure (RESERVE/RELEASE pattern):
      *   Phase 1 (sync IMMEDIATE): read balance + daily_spend, evaluate policy, write PAYMENT_REQUEST audit
      *   Phase 1.5 (sync IMMEDIATE): write RESERVE ledger entry (-amount_msat) before wallet call
      *   Wallet call (async): subscribeToPayViaRequest — captures payment_hash in 'paying' event
@@ -282,7 +282,7 @@ export function createPaymentsService(walletOrOptions: WalletBackend | PaymentsS
      *   Phase 2 — on SETTLED: write PAYMENT ledger debit + PAYMENT_SETTLED audit
      *   Phase 2 — on FAILED: write PAYMENT_FAILED audit (CashuWalletBackend already restores proofs)
      *
-     * Simulated payment structure (unchanged from Phase 1):
+     * Simulated payment structure:
      *   Phase 1 (sync IMMEDIATE): read state, evaluate policy, write PAYMENT_REQUEST audit
      *   Wallet call (async): simulatedWallet.pay() — always settles
      *   Phase 2 (sync IMMEDIATE): write PAYMENT ledger debit + PAYMENT_SETTLED audit atomically
@@ -294,7 +294,7 @@ export function createPaymentsService(walletOrOptions: WalletBackend | PaymentsS
      */
     async processPayment(db: DB, agentId: string, request: PaymentRequest): Promise<PaymentResponse> {
       const txId = generateTransactionId();
-      // Capture timestamp BEFORE Phase 1 transaction for point-in-time policy lookup (PLCY-09)
+      // Capture timestamp BEFORE the Phase 1 transaction for point-in-time policy lookup
       const requestTimestamp = Date.now();
 
       try {
@@ -330,7 +330,7 @@ export function createPaymentsService(walletOrOptions: WalletBackend | PaymentsS
             throw new Error(`Agent not found: ${agentId}`);
           }
 
-          // Point-in-time policy version lookup (PLCY-09)
+          // Point-in-time policy version lookup
           // Uses requestTimestamp captured before the transaction for correct versioning.
           // Falls back to legacy policies table if no policy_versions rows exist (backward compat).
           const policyVersion = policyVersionsRepo.getVersionAt(
@@ -356,7 +356,7 @@ export function createPaymentsService(walletOrOptions: WalletBackend | PaymentsS
             policyMaxFeeMsat = effectivePolicy.max_fee_msat;
           }
 
-          // Capture approval_timeout_ms for REQUIRE_HUMAN_APPROVAL path (Plan 02 will use it)
+          // Capture approval_timeout_ms for the REQUIRE_HUMAN_APPROVAL path (sets the pending approval's expiry)
           approvalTimeoutMs = policyVersion?.approval_timeout_ms ?? 300_000;
 
           // Evaluate policy (fail-closed — evaluatePolicy never throws)
@@ -477,7 +477,7 @@ export function createPaymentsService(walletOrOptions: WalletBackend | PaymentsS
         // ---------------------------------------------------------------
         // Phase 1.5 (Lightning ONLY): Write RESERVE ledger entry BEFORE
         // calling the wallet. This debits the balance immediately and
-        // ensures crash recovery can detect the in-flight payment (SEC-04).
+        // ensures crash recovery can detect the in-flight payment.
         //
         // Key invariant: if Treasury crashes between Phase 1.5 and the wallet
         // call, the RESERVE entry has no payment_hash — crash recovery treats
@@ -647,7 +647,7 @@ export function createPaymentsService(walletOrOptions: WalletBackend | PaymentsS
               }
             }, { behavior: 'immediate' });
 
-            // Post-settlement balance alert check (OBSV-06)
+            // Post-settlement balance alert check
             // Fire-and-forget — must not affect payment response
             alertsService.checkAndNotify(db as unknown as Db, agentId).catch(() => {});
           } else if (selectedRail === 'cashu') {
@@ -695,7 +695,7 @@ export function createPaymentsService(walletOrOptions: WalletBackend | PaymentsS
               }
             }, { behavior: 'immediate' });
 
-            // Post-settlement balance alert check (OBSV-06)
+            // Post-settlement balance alert check
             // Fire-and-forget — must not affect payment response
             alertsService.checkAndNotify(db as unknown as Db, agentId).catch(() => {});
           } else {
@@ -719,7 +719,7 @@ export function createPaymentsService(walletOrOptions: WalletBackend | PaymentsS
               });
             }, { behavior: 'immediate' });
 
-            // Post-settlement balance alert check (OBSV-06)
+            // Post-settlement balance alert check
             // Fire-and-forget — must not affect payment response
             alertsService.checkAndNotify(db as unknown as Db, agentId).catch(() => {});
           }
