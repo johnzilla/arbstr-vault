@@ -1,9 +1,8 @@
 {
   "name": "arbstr-vault",
   "version": "1.0.0",
-  "description": "",
+  "description": "Agent treasury service: per-agent balances, spending policy, Lightning and Cashu rails, and internal billing for arbstr",
   "type": "module",
-  "main": "index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "start": "node --import tsx src/index.ts",
@@ -18,7 +17,7 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/johnzilla/arbstr-vault/issues"
   },
@@ -45,5 +44,8 @@
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "vitest": "^4.0.18"
+  },
+  "engines": {
+    "node": ">=22 <23"
   }
 }
