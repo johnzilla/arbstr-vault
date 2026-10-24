@@ -20,7 +20,7 @@ export const internalBillingRoutes: FastifyPluginAsync = async (fastify) => {
       schema: {
         body: z.object({
           agent_token: z.string(),              // per D-05: raw vtk_ token
-          amount_msats: z.number().int().positive(), // per D-06: positive integer
+          amount_msats: z.number().int().nonnegative(), // 0 allowed: free local-tier providers
           correlation_id: z.string(),            // per D-05: ties to arbstr request
           model: z.string(),                     // per D-05: LLM model name
         }),
@@ -85,17 +85,28 @@ export const internalBillingRoutes: FastifyPluginAsync = async (fastify) => {
   );
 
   // POST /internal/settle — settle a reservation at actual cost (per BILL-05..BILL-08)
+  //
+  // Body shape matches arbstr core's VaultClient::settle: usage details nested
+  // under `metadata`, with tokens as Option<u32> (null when the provider did not
+  // report usage). The legacy flat shape is still accepted; nested wins.
   app.post(
     '/internal/settle',
     {
       schema: {
         body: z.object({
           reservation_id: z.string(),
-          actual_msats: z.number().int().positive(),
-          tokens_in: z.number().int().nonnegative(),
-          tokens_out: z.number().int().nonnegative(),
-          provider: z.string(),
-          latency_ms: z.number().int().nonnegative(),
+          actual_msats: z.number().int().nonnegative(),
+          metadata: z.object({
+            tokens_in: z.number().int().nonnegative().nullish(),
+            tokens_out: z.number().int().nonnegative().nullish(),
+            provider: z.string(),
+            latency_ms: z.number().int().nonnegative(),
+          }).optional(),
+          // Legacy flat fields (pre-contract-fix callers)
+          tokens_in: z.number().int().nonnegative().nullish(),
+          tokens_out: z.number().int().nonnegative().nullish(),
+          provider: z.string().optional(),
+          latency_ms: z.number().int().nonnegative().optional(),
         }),
         response: {
           200: z.object({
@@ -107,11 +118,19 @@ export const internalBillingRoutes: FastifyPluginAsync = async (fastify) => {
           404: z.object({
             error: z.object({ code: z.string(), message: z.string() }),
           }),
+          409: z.object({
+            error: z.object({ code: z.string(), message: z.string() }),
+          }),
         },
       },
     },
     async (request, reply) => {
-      const { reservation_id, actual_msats, tokens_in, tokens_out, provider, latency_ms } = request.body;
+      const { reservation_id, actual_msats: requested_msats } = request.body;
+      const meta = request.body.metadata ?? request.body;
+      const tokens_in = meta.tokens_in ?? null;
+      const tokens_out = meta.tokens_out ?? null;
+      const provider = meta.provider ?? null;
+      const latency_ms = meta.latency_ms ?? null;
 
       // Step 1: Look up RESERVE entry
       const reserve = ledgerRepo.findById(app.db, reservation_id);
@@ -120,17 +139,35 @@ export const internalBillingRoutes: FastifyPluginAsync = async (fastify) => {
           error: { code: 'not_found', message: 'Reservation not found' },
         });
       }
+      const reserved_msats = Math.abs(reserve.amount_msat);
 
-      // Step 2: Idempotency check — if RELEASE already exists, settle already happened
-      const existing = ledgerRepo.findByRefIdAndType(app.db, reservation_id, 'RELEASE');
-      if (existing) {
-        const remainingBalance = ledgerRepo.getBalance(app.db, reserve.agent_id);
+      // Step 2: Idempotency — a PAYMENT for this reservation means it was already
+      // settled; replay the original outcome (first write wins).
+      const priorPayment = ledgerRepo.findByRefIdAndType(app.db, reservation_id, 'PAYMENT');
+      if (priorPayment) {
+        const charged = Math.abs(priorPayment.amount_msat);
         return reply.send({
           settled: true as const,
-          refunded_msats: Math.abs(reserve.amount_msat) - actual_msats,
-          actual_msats,
-          remaining_balance_msats: remainingBalance,
+          refunded_msats: reserved_msats - charged,
+          actual_msats: charged,
+          remaining_balance_msats: ledgerRepo.getBalance(app.db, reserve.agent_id),
         });
+      }
+
+      // A RELEASE without a PAYMENT means the hold was already returned. Charging
+      // now would debit funds that are no longer held, so refuse instead.
+      if (ledgerRepo.findByRefIdAndType(app.db, reservation_id, 'RELEASE')) {
+        request.log.warn({ reservation_id }, 'settle refused: reservation already released');
+        return reply.status(409).send({
+          error: { code: 'already_released', message: 'Reservation was already released' },
+        });
+      }
+
+      // Never charge more than was held: the reservation is the authorized maximum.
+      const actual_msats = Math.min(requested_msats, reserved_msats);
+      const capped = requested_msats > reserved_msats;
+      if (capped) {
+        request.log.warn({ reservation_id, requested_msats, reserved_msats }, 'settle capped at reserved amount');
       }
 
       // Step 3: Atomic transaction — RELEASE + PAYMENT + audit
@@ -139,7 +176,7 @@ export const internalBillingRoutes: FastifyPluginAsync = async (fastify) => {
         ledgerRepo.insert(app.db, {
           id: generateTransactionId(),
           agent_id: reserve.agent_id,
-          amount_msat: Math.abs(reserve.amount_msat),
+          amount_msat: reserved_msats,
           entry_type: 'RELEASE',
           ref_id: reservation_id,
           mode: 'simulated',
@@ -159,7 +196,10 @@ export const internalBillingRoutes: FastifyPluginAsync = async (fastify) => {
           action: 'PAYMENT_SETTLED',
           amount_msat: actual_msats,
           ref_id: reservation_id,
-          metadata: { tokens_in, tokens_out, provider, latency_ms },
+          metadata: {
+            tokens_in, tokens_out, provider, latency_ms,
+            ...(capped ? { capped: true, requested_msats } : {}),
+          },
         });
       });
 
@@ -167,7 +207,7 @@ export const internalBillingRoutes: FastifyPluginAsync = async (fastify) => {
       const remainingBalance = ledgerRepo.getBalance(app.db, reserve.agent_id);
       return reply.send({
         settled: true as const,
-        refunded_msats: Math.abs(reserve.amount_msat) - actual_msats,
+        refunded_msats: reserved_msats - actual_msats,
         actual_msats,
         remaining_balance_msats: remainingBalance,
       });
@@ -181,12 +221,16 @@ export const internalBillingRoutes: FastifyPluginAsync = async (fastify) => {
       schema: {
         body: z.object({
           reservation_id: z.string(),
+          reason: z.string().optional(), // sent by arbstr core; informational only
         }),
         response: {
           200: z.object({
             released: z.literal(true),
           }),
           404: z.object({
+            error: z.object({ code: z.string(), message: z.string() }),
+          }),
+          409: z.object({
             error: z.object({ code: z.string(), message: z.string() }),
           }),
         },
@@ -203,7 +247,15 @@ export const internalBillingRoutes: FastifyPluginAsync = async (fastify) => {
         });
       }
 
-      // Step 2: Idempotency check — if RELEASE already exists, already released
+      // Step 2: A settled reservation cannot be released — the caller must not
+      // believe it refunded the buyer when the charge already stands.
+      if (ledgerRepo.findByRefIdAndType(app.db, reservation_id, 'PAYMENT')) {
+        return reply.status(409).send({
+          error: { code: 'already_settled', message: 'Reservation was already settled' },
+        });
+      }
+
+      // Idempotency: a RELEASE without a PAYMENT means it was already released
       const existing = ledgerRepo.findByRefIdAndType(app.db, reservation_id, 'RELEASE');
       if (existing) {
         return reply.send({ released: true as const });

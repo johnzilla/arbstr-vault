@@ -121,6 +121,18 @@ Requires `VAULT_INTERNAL_TOKEN` to be configured. Authenticated via `X-Internal-
 | `POST` | `/internal/settle` | Settle a reservation (deduct actual cost) |
 | `POST` | `/internal/release` | Release an unused reservation |
 
+Request bodies match arbstr core's `VaultClient` (contract tests in `tests/contract/core-billing.test.ts`):
+
+- **reserve** — `{ agent_token, amount_msats, correlation_id, model }`. `amount_msats` may be `0` (free local-tier providers).
+- **settle** — `{ reservation_id, actual_msats, metadata: { tokens_in, tokens_out, provider, latency_ms } }`. Token counts may be `null`. The legacy flat shape (fields at top level) is still accepted.
+- **release** — `{ reservation_id, reason? }`.
+
+Settlement rules:
+
+- A charge never exceeds the reservation — `actual_msats` above the reserved amount is capped and the overage recorded in the audit log.
+- Repeating a settle is idempotent and returns the original outcome.
+- Settle after release → `409 already_released`; release after settle → `409 already_settled`. Neither moves funds.
+
 ### Health
 
 | Method | Path | Description |

@@ -10,7 +10,7 @@
  * - After successful reserve, balance is reduced
  * - RESERVE ledger entry has negative amount_msat, entry_type 'RESERVE', mode 'simulated'
  * - Missing body fields => 400
- * - amount_msats=0 => 400
+ * - amount_msats=0 => 200 (free local-tier providers)
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
@@ -232,7 +232,7 @@ describe('POST /internal/reserve', () => {
     expect(res.statusCode).toBe(400);
   });
 
-  it('Test 9: amount_msats=0 returns 400 (must be positive)', async () => {
+  it('Test 9: amount_msats=0 returns 200 (free local-tier providers)', async () => {
     const res = await app.inject({
       method: 'POST',
       url: '/internal/reserve',
@@ -245,7 +245,8 @@ describe('POST /internal/reserve', () => {
       },
     });
 
-    expect(res.statusCode).toBe(400);
+    expect(res.statusCode).toBe(200);
+    expect((JSON.parse(res.body) as { remaining_balance_msats: number }).remaining_balance_msats).toBe(100_000);
   });
 });
 
@@ -454,7 +455,7 @@ describe('POST /internal/settle', () => {
     expect(body.error.code).toBe('not_found');
   });
 
-  it('settle with actual cost higher than reserved amount works correctly', async () => {
+  it('settle with actual cost higher than reserved amount is capped at the reservation', async () => {
     const reservationId = await reserveFunds(app, 10_000);
 
     const res = await app.inject({
@@ -479,8 +480,9 @@ describe('POST /internal/settle', () => {
       remaining_balance_msats: number;
     };
     expect(body.settled).toBe(true);
-    expect(body.refunded_msats).toBe(-5_000); // 10000 - 15000 = -5000 (overcharge)
-    expect(body.remaining_balance_msats).toBe(85_000); // 100000 - 15000
+    expect(body.actual_msats).toBe(10_000); // capped at reserved amount
+    expect(body.refunded_msats).toBe(0);
+    expect(body.remaining_balance_msats).toBe(90_000); // 100000 - 10000
   });
 
   it('balance after settle reflects actual cost not reserved amount', async () => {
