@@ -1,0 +1,11 @@
+version: 2
+updates:
+  # Keep workflow actions current (e.g. Node runtime deprecations).
+  # All action bumps arrive as one weekly PR.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      github-actions:
+        patterns: ["*"]
