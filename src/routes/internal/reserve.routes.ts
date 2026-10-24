@@ -323,4 +323,33 @@ export const internalBillingRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.send({ released: true as const });
     },
   );
+
+  // Authenticate an agent token without reserving anything. Core calls this for
+  // endpoints that need a valid agent but cost nothing (/v1/models, /v1/cost).
+  // Read-only: no ledger or audit writes, no policy check.
+  app.post(
+    '/internal/agents/verify',
+    {
+      schema: {
+        body: z.object({
+          agent_token: z.string(),
+        }),
+        response: {
+          200: z.object({ agent_id: z.string() }),
+          401: z.object({
+            error: z.object({ code: z.string(), message: z.string() }),
+          }),
+        },
+      },
+    },
+    async (request, reply) => {
+      const agent = agentsRepo.findByTokenHash(app.db, hashToken(request.body.agent_token));
+      if (!agent) {
+        return reply.status(401).send({
+          error: { code: 'invalid_agent_token', message: 'Invalid agent token' },
+        });
+      }
+      return reply.send({ agent_id: agent.id });
+    },
+  );
 };

@@ -206,11 +206,34 @@ describe('core ↔ vault billing contract', () => {
     expect(balance()).toBe(STARTING_BALANCE);
   });
 
+  it('verify returns the agent id for a known token and writes nothing', async () => {
+    const auditBefore = app.db.select().from(schema.auditLog).all().length;
+    const res = await post('/internal/agents/verify', { agent_token: TEST_AGENT_TOKEN });
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual({ agent_id: AGENT_ID });
+    expect(balance()).toBe(STARTING_BALANCE);
+    expect(app.db.select().from(schema.auditLog).all()).toHaveLength(auditBefore);
+  });
+
+  it('verify ignores policy: a deny-all agent still authenticates', async () => {
+    app.db.insert(schema.agents).values({ id: 'ag_denyall', name: 'Deny All', token_hash: hashToken('vtk_deny_all') }).run();
+    const res = await post('/internal/agents/verify', { agent_token: 'vtk_deny_all' });
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual({ agent_id: 'ag_denyall' });
+  });
+
+  it('verify of an unknown agent token is 401 invalid_agent_token', async () => {
+    const res = await post('/internal/agents/verify', { agent_token: 'vtk_not_a_real_token' });
+    expect(res.statusCode).toBe(401);
+    expect(res.json().error.code).toBe('invalid_agent_token');
+  });
+
   it('wrong internal token is 401 invalid_internal_token on every billing route', async () => {
     for (const [url, payload] of [
       ['/internal/reserve', coreReserveBody(1_000)],
       ['/internal/settle', coreSettleBody('tx_any', 1_000)],
       ['/internal/release', coreReleaseBody('tx_any')],
+      ['/internal/agents/verify', { agent_token: TEST_AGENT_TOKEN }],
     ] as const) {
       const res = await app.inject({ method: 'POST', url, headers: { 'x-internal-token': 'wrong-token' }, payload });
       expect(res.statusCode).toBe(401);

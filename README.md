@@ -127,6 +127,7 @@ Requires `VAULT_INTERNAL_TOKEN` to be configured. Authenticated via `X-Internal-
 | `POST` | `/internal/reserve` | Reserve funds against an agent balance |
 | `POST` | `/internal/settle` | Settle a reservation (deduct actual cost) |
 | `POST` | `/internal/release` | Release an unused reservation |
+| `POST` | `/internal/agents/verify` | Check an agent token without reserving (`{ agent_token }` → `{ agent_id }`, or 401 `invalid_agent_token`) |
 
 Request bodies match arbstr core's `VaultClient` (contract tests in `tests/contract/core-billing.test.ts`):
 
