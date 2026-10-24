@@ -113,6 +113,7 @@ export const auditLog = sqliteTable('audit_log', {
       'WITHDRAWAL_COMPLETED',
       'WEBHOOK_DELIVERY_FAILED',
       'BALANCE_ALERT',
+      'RESERVATION_EXPIRED',
     ],
   }).notNull(),
   policy_decision: text('policy_decision', {

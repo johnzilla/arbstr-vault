@@ -7,6 +7,7 @@ import { dirname, join } from 'path';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { WalletBackend } from './modules/payments/wallet/wallet.interface.js';
 import { approvalsService } from './modules/approvals/approvals.service.js';
+import { reservationsService } from './modules/billing/reservations.service.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -54,10 +55,26 @@ async function main() {
     }
   }, TIMEOUT_POLL_INTERVAL_MS);
 
+  // Stale billing reservation sweeper — releases reservations core never settled.
+  // The first sweep runs one interval after startup, giving core's reconciliation
+  // task time to replay settlements it queued while vault was down.
+  const SWEEP_INTERVAL_MS = 60_000;
+  const sweepInterval = setInterval(() => {
+    try {
+      const expired = reservationsService.expireStale(db as unknown as Db, config.BILLING_RESERVATION_TTL_MS);
+      for (const r of expired) {
+        app.log.warn(r, 'Released stale billing reservation');
+      }
+    } catch (err) {
+      app.log.error({ err }, 'Reservation sweeper error');
+    }
+  }, SWEEP_INTERVAL_MS);
+
   // Clean up on shutdown. Must be registered before listen() — Fastify
   // rejects addHook once the instance is listening.
   app.addHook('onClose', () => {
     clearInterval(timeoutInterval);
+    clearInterval(sweepInterval);
   });
 
   try {

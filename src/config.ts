@@ -18,6 +18,9 @@ const configSchema = z
     OPERATOR_WEBHOOK_URL: z.string().url().optional(),
     OPERATOR_WEBHOOK_SECRET: z.string().min(16).optional(),
     VAULT_INTERNAL_TOKEN: z.string().min(32).optional(),
+    // Billing reservations older than this that core never settled or released
+    // are released by the sweeper. Must exceed core's longest request.
+    BILLING_RESERVATION_TTL_MS: z.coerce.number().int().min(60_000).default(900_000),
   })
   .refine(
     (data) => {

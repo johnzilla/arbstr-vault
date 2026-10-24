@@ -74,6 +74,7 @@ The service starts on `http://localhost:3000` with `WALLET_BACKEND=simulated` by
 | `OPERATOR_WEBHOOK_URL` | No | — | Webhook URL for operator notifications |
 | `OPERATOR_WEBHOOK_SECRET` | No | — | HMAC-SHA256 secret for webhook signing |
 | `VAULT_INTERNAL_TOKEN` | No | — | Shared secret (min 32 chars) for internal billing API |
+| `BILLING_RESERVATION_TTL_MS` | No | `900000` | Age at which an unsettled billing reservation is released (min 60000) |
 
 ## Wallet Backends
 
@@ -139,6 +140,7 @@ Settlement rules:
 - A charge never exceeds the reservation — `actual_msats` above the reserved amount is capped and the overage recorded in the audit log.
 - Repeating a settle is idempotent and returns the original outcome.
 - Settle after release → `409 already_released`; release after settle → `409 already_settled`. Neither moves funds.
+- Reservations core never settles or releases (for example, core crashed mid-request) are released once they're older than `BILLING_RESERVATION_TTL_MS` (default 15 minutes). The sweep runs every minute, and its first run is one minute after startup, which gives core time to replay settles it queued while vault was down. Each release is audited as `RESERVATION_EXPIRED`. A settle that arrives later gets `409 already_released`, and the agent isn't charged. Only billing reservations are swept; holds from `/pay` approvals, withdrawals and Lightning payments are left alone.
 
 ### Health
 

@@ -21,7 +21,8 @@ type AuditAction =
   | 'WITHDRAWAL_REQUESTED'
   | 'WITHDRAWAL_COMPLETED'
   | 'WEBHOOK_DELIVERY_FAILED'
-  | 'BALANCE_ALERT';
+  | 'BALANCE_ALERT'
+  | 'RESERVATION_EXPIRED';
 
 export interface AuditEntry {
   agent_id: string;
