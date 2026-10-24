@@ -53,7 +53,7 @@ export const alertsService = {
       agent_id: agentId,
       balance_msat: balance,
       alert_floor_msat: policy.alert_floor_msat,
-    }).catch(() => {});
+    }, db).catch(() => {});
   },
 
   /** Reset cooldown tracker — for testing only */

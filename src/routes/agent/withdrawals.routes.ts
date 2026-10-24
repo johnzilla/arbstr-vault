@@ -150,7 +150,7 @@ export const agentWithdrawalRoutes: FastifyPluginAsync = async (fastify) => {
         agent_id: id,
         transaction_id: txId,
         amount_msat,
-      }).catch(() => {});
+      }, narrowDb).catch(() => {});
 
       // 7. Return 200 with withdrawal details
       return reply.send({

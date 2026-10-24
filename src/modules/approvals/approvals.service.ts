@@ -78,7 +78,7 @@ export const approvalsService = {
       agent_id: agentId,
       transaction_id: txId,
       amount_msat: amountMsat,
-    }).catch(() => {});
+    }, db).catch(() => {});
 
     return approvalRow!;
   },
@@ -132,7 +132,7 @@ export const approvalsService = {
         agent_id: claimed.agent_id,
         transaction_id: claimed.transaction_id,
         amount_msat: claimed.amount_msat,
-      }).catch(() => {});
+      }, db).catch(() => {});
 
       return { ...claimed, payment_status: 'FAILED' as const };
     }
@@ -201,7 +201,7 @@ export const approvalsService = {
         agent_id: claimed.agent_id,
         transaction_id: claimed.transaction_id,
         amount_msat: claimed.amount_msat,
-      }).catch(() => {});
+      }, db).catch(() => {});
     }
   },
 };
