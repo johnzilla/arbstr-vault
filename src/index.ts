@@ -43,14 +43,6 @@ async function main() {
 
   const app = buildApp({ db, wallet, cashuWallet });
 
-  try {
-    await app.listen({ port: config.PORT, host: '0.0.0.0' });
-    app.log.info(`arbstr-vault started on port ${config.PORT} (wallet: ${config.WALLET_BACKEND})`);
-  } catch (err) {
-    app.log.error(err);
-    process.exit(1);
-  }
-
   // Approval timeout checker — polls every 30s for expired pending approvals
   // Runs here (not in buildApp) so tests with in-memory DBs are never affected.
   const TIMEOUT_POLL_INTERVAL_MS = 30_000;
@@ -62,10 +54,19 @@ async function main() {
     }
   }, TIMEOUT_POLL_INTERVAL_MS);
 
-  // Clean up on shutdown
+  // Clean up on shutdown. Must be registered before listen() — Fastify
+  // rejects addHook once the instance is listening.
   app.addHook('onClose', () => {
     clearInterval(timeoutInterval);
   });
+
+  try {
+    await app.listen({ port: config.PORT, host: '0.0.0.0' });
+    app.log.info(`arbstr-vault started on port ${config.PORT} (wallet: ${config.WALLET_BACKEND})`);
+  } catch (err) {
+    app.log.error(err);
+    process.exit(1);
+  }
 }
 
 main();
