@@ -5,14 +5,16 @@ import { config } from '../config.js';
 /**
  * Fastify onRequest hook for internal service authentication.
  * Validates X-Internal-Token header against VAULT_INTERNAL_TOKEN using constant-time comparison.
- * Returns 401 on any failure (missing header, empty, wrong token, or token unconfigured).
+ * Returns 401 `invalid_internal_token` on any failure (missing header, empty, wrong token,
+ * or token unconfigured) — distinct from reserve's `invalid_agent_token` so callers can
+ * tell a service misconfiguration from a bad agent credential.
  */
 export async function internalAuth(request: FastifyRequest, reply: FastifyReply): Promise<void> {
   const token = request.headers['x-internal-token'];
 
   if (!config.VAULT_INTERNAL_TOKEN || typeof token !== 'string' || !token) {
     return reply.status(401).send({
-      error: { code: 'unauthorized', message: 'Invalid internal token' },
+      error: { code: 'invalid_internal_token', message: 'Invalid internal token' },
     });
   }
 
@@ -22,19 +24,19 @@ export async function internalAuth(request: FastifyRequest, reply: FastifyReply)
 
     if (providedBuf.length !== expectedBuf.length) {
       return reply.status(401).send({
-        error: { code: 'unauthorized', message: 'Invalid internal token' },
+        error: { code: 'invalid_internal_token', message: 'Invalid internal token' },
       });
     }
 
     const valid = timingSafeEqual(providedBuf, expectedBuf);
     if (!valid) {
       return reply.status(401).send({
-        error: { code: 'unauthorized', message: 'Invalid internal token' },
+        error: { code: 'invalid_internal_token', message: 'Invalid internal token' },
       });
     }
   } catch {
     return reply.status(401).send({
-      error: { code: 'unauthorized', message: 'Invalid internal token' },
+      error: { code: 'invalid_internal_token', message: 'Invalid internal token' },
     });
   }
 }

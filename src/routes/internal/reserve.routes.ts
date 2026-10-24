@@ -48,7 +48,7 @@ export const internalBillingRoutes: FastifyPluginAsync = async (fastify) => {
       const agent = agentsRepo.findByTokenHash(app.db, tokenHash);
       if (!agent) {
         return reply.status(401).send({
-          error: { code: 'unauthorized', message: 'Invalid agent token' },
+          error: { code: 'invalid_agent_token', message: 'Invalid agent token' },
         });
       }
 

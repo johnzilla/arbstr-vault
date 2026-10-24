@@ -141,6 +141,7 @@ describe('POST /internal/reserve', () => {
 
     expect(res.statusCode).toBe(401);
     const body = JSON.parse(res.body) as { error: { code: string; message: string } };
+    expect(body.error.code).toBe('invalid_agent_token');
     expect(body.error.message).toBe('Invalid agent token');
   });
 

@@ -54,7 +54,7 @@ describe('internalAuth middleware', () => {
 
     expect(reply._statusCode).toBe(401);
     expect(reply._body).toEqual({
-      error: { code: 'unauthorized', message: 'Invalid internal token' },
+      error: { code: 'invalid_internal_token', message: 'Invalid internal token' },
     });
   });
 
@@ -68,7 +68,7 @@ describe('internalAuth middleware', () => {
 
     expect(reply._statusCode).toBe(401);
     expect(reply._body).toEqual({
-      error: { code: 'unauthorized', message: 'Invalid internal token' },
+      error: { code: 'invalid_internal_token', message: 'Invalid internal token' },
     });
   });
 
@@ -82,7 +82,7 @@ describe('internalAuth middleware', () => {
 
     expect(reply._statusCode).toBe(401);
     expect(reply._body).toEqual({
-      error: { code: 'unauthorized', message: 'Invalid internal token' },
+      error: { code: 'invalid_internal_token', message: 'Invalid internal token' },
     });
   });
 
@@ -101,7 +101,7 @@ describe('internalAuth middleware', () => {
 
     expect(reply._statusCode).toBe(401);
     expect(reply._body).toEqual({
-      error: { code: 'unauthorized', message: 'Invalid internal token' },
+      error: { code: 'invalid_internal_token', message: 'Invalid internal token' },
     });
   });
 });

@@ -193,4 +193,26 @@ describe('core ↔ vault billing contract', () => {
       .filter((e) => e.entry_type === 'PAYMENT');
     expect(payments).toHaveLength(1);
   });
+
+  // Core maps these codes, not the message text: invalid_agent_token → 401 to the
+  // client, invalid_internal_token → 500 (core's VAULT_INTERNAL_TOKEN is wrong).
+  it('unknown agent token on reserve is 401 invalid_agent_token', async () => {
+    const res = await post('/internal/reserve', { ...coreReserveBody(1_000), agent_token: 'vtk_not_a_real_token' });
+    expect(res.statusCode).toBe(401);
+    expect(res.json().error.code).toBe('invalid_agent_token');
+    expect(balance()).toBe(STARTING_BALANCE);
+  });
+
+  it('wrong internal token is 401 invalid_internal_token on every billing route', async () => {
+    for (const [url, payload] of [
+      ['/internal/reserve', coreReserveBody(1_000)],
+      ['/internal/settle', coreSettleBody('tx_any', 1_000)],
+      ['/internal/release', coreReleaseBody('tx_any')],
+    ] as const) {
+      const res = await app.inject({ method: 'POST', url, headers: { 'x-internal-token': 'wrong-token' }, payload });
+      expect(res.statusCode).toBe(401);
+      expect(res.json().error.code).toBe('invalid_internal_token');
+    }
+    expect(balance()).toBe(STARTING_BALANCE);
+  });
 });
