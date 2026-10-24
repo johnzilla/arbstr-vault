@@ -127,6 +127,13 @@ Request bodies match arbstr core's `VaultClient` (contract tests in `tests/contr
 - **settle** — `{ reservation_id, actual_msats, metadata: { tokens_in, tokens_out, provider, latency_ms } }`. Token counts may be `null`. The legacy flat shape (fields at top level) is still accepted.
 - **release** — `{ reservation_id, reason? }`.
 
+Reserve applies the agent's policy, using the same engine as `/agents/:id/pay`:
+
+- A missing or deny-all policy (the default for new agents) is denied, even at zero cost. Set limits with `PATCH /operator/agents/:id/policy` before billing through core.
+- An amount above `max_transaction_msat` is denied. An over-limit amount that `/pay` would send for human approval is also denied here, because billing can't wait for an operator.
+- Settled payments in the last 24h, plus open reservations, plus the new amount must stay within `daily_limit_msat`.
+- Denials return `403 { error: { code: "policy_denied" }, reason }`. Every decision is audited as `PAYMENT_REQUEST`.
+
 Settlement rules:
 
 - A charge never exceeds the reservation — `actual_msats` above the reserved amount is capped and the overage recorded in the audit log.

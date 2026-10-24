@@ -3,13 +3,19 @@ import { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { z } from 'zod/v4';
 import { internalAuth } from '../../middleware/internalAuth.js';
 import { hashToken } from '../../modules/tokens/tokens.service.js';
-import { agentsRepo } from '../../modules/agents/agents.repo.js';
+import { agentsRepo, policyVersionsRepo } from '../../modules/agents/agents.repo.js';
+import { evaluatePolicy } from '../../modules/policy/policy.engine.js';
 import { ledgerRepo } from '../../modules/ledger/ledger.repo.js';
 import { auditRepo } from '../../modules/audit/audit.repo.js';
 import { generateTransactionId } from '../../types.js';
+import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
+
+// ledgerRepo/auditRepo take the schema-less handle (same cast as payments.service.ts)
+type Db = BetterSQLite3Database<Record<string, never>>;
 
 export const internalBillingRoutes: FastifyPluginAsync = async (fastify) => {
   const app = fastify.withTypeProvider<ZodTypeProvider>();
+  const ledgerDb = app.db as unknown as Db;
 
   // Gate all internal routes behind X-Internal-Token (per D-01)
   app.addHook('onRequest', internalAuth);
@@ -37,11 +43,15 @@ export const internalBillingRoutes: FastifyPluginAsync = async (fastify) => {
             current_balance_msats: z.number(),
             requested_msats: z.number(),
           }),
+          403: z.object({
+            error: z.object({ code: z.string(), message: z.string() }),
+            reason: z.string(),
+          }),
         },
       },
     },
     async (request, reply) => {
-      const { agent_token, amount_msats, correlation_id } = request.body;
+      const { agent_token, amount_msats, correlation_id, model } = request.body;
 
       // Step 1: Resolve agent from token (per BILL-02, D-05)
       const tokenHash = hashToken(agent_token);
@@ -52,31 +62,70 @@ export const internalBillingRoutes: FastifyPluginAsync = async (fastify) => {
         });
       }
 
-      // Step 2: Check balance (per BILL-03)
-      const balance = ledgerRepo.getBalance(app.db, agent.id);
-      if (balance < amount_msats) {
+      // Step 2: Policy + balance check and RESERVE insert in one immediate
+      // transaction, so concurrent reserves cannot both pass the same limit.
+      // Same engine and fail-closed rules as /agents/:id/pay: a deny-all or
+      // missing policy denies. The daily window counts settled PAYMENTs plus
+      // open reservations. REQUIRE_HUMAN_APPROVAL is a deny here — billing is
+      // synchronous and core cannot wait for an operator.
+      const reservationId = generateTransactionId();
+      const decision = app.db.transaction(() => {
+        const policy =
+          policyVersionsRepo.getVersionAt(app.db, agent.id, Date.now()) ??
+          agentsRepo.getWithPolicy(app.db, agent.id)?.policy ??
+          null;
+        const balance = ledgerRepo.getBalance(ledgerDb, agent.id);
+        const dailySpent =
+          ledgerRepo.getDailySpend(ledgerDb, agent.id) + ledgerRepo.getOpenReservedTotal(ledgerDb, agent.id);
+        const result = evaluatePolicy(policy, {
+          balance_msat: balance,
+          daily_spent_msat: dailySpent,
+          request_amount_msat: amount_msats,
+        });
+
+        auditRepo.insert(ledgerDb, {
+          agent_id: agent.id,
+          action: 'PAYMENT_REQUEST',
+          policy_decision: result.outcome,
+          policy_reason: result.reason,
+          amount_msat: amount_msats,
+          ref_id: reservationId,
+          metadata: { source: 'internal_billing', correlation_id, model },
+        });
+
+        if (result.outcome === 'ALLOW') {
+          // Step 3: Insert RESERVE ledger entry (per BILL-04)
+          // Amount is NEGATIVE (reserve reduces available balance)
+          // mode is 'simulated' (per D-10, all billing is ledger-only)
+          ledgerRepo.insert(ledgerDb, {
+            id: reservationId,
+            agent_id: agent.id,
+            amount_msat: -amount_msats,
+            entry_type: 'RESERVE',
+            ref_id: correlation_id,
+            mode: 'simulated',
+          });
+        }
+        return { ...result, balance };
+      }, { behavior: 'immediate' });
+
+      if (decision.reason === 'insufficient_balance') {
         return reply.status(402).send({
           error: { code: 'insufficient_balance', message: 'Insufficient balance for reservation' },
-          current_balance_msats: balance,
+          current_balance_msats: decision.balance,
           requested_msats: amount_msats,
         });
       }
-
-      // Step 3: Insert RESERVE ledger entry (per BILL-04)
-      // Amount is NEGATIVE (reserve reduces available balance)
-      // mode is 'simulated' (per D-10, all billing is ledger-only)
-      const reservationId = generateTransactionId();
-      ledgerRepo.insert(app.db, {
-        id: reservationId,
-        agent_id: agent.id,
-        amount_msat: -amount_msats,
-        entry_type: 'RESERVE',
-        ref_id: correlation_id,
-        mode: 'simulated',
-      });
+      if (decision.outcome !== 'ALLOW') {
+        request.log.info({ agent_id: agent.id, reason: decision.reason, amount_msats }, 'reserve denied by policy');
+        return reply.status(403).send({
+          error: { code: 'policy_denied', message: `Reservation denied by agent policy: ${decision.reason}` },
+          reason: decision.reason,
+        });
+      }
 
       // Step 4: Return reservation_id and remaining balance (per D-08)
-      const remainingBalance = ledgerRepo.getBalance(app.db, agent.id);
+      const remainingBalance = ledgerRepo.getBalance(ledgerDb, agent.id);
       return reply.send({
         reservation_id: reservationId,
         remaining_balance_msats: remainingBalance,
@@ -133,7 +182,7 @@ export const internalBillingRoutes: FastifyPluginAsync = async (fastify) => {
       const latency_ms = meta.latency_ms ?? null;
 
       // Step 1: Look up RESERVE entry
-      const reserve = ledgerRepo.findById(app.db, reservation_id);
+      const reserve = ledgerRepo.findById(ledgerDb, reservation_id);
       if (!reserve || reserve.entry_type !== 'RESERVE') {
         return reply.status(404).send({
           error: { code: 'not_found', message: 'Reservation not found' },
@@ -143,20 +192,20 @@ export const internalBillingRoutes: FastifyPluginAsync = async (fastify) => {
 
       // Step 2: Idempotency — a PAYMENT for this reservation means it was already
       // settled; replay the original outcome (first write wins).
-      const priorPayment = ledgerRepo.findByRefIdAndType(app.db, reservation_id, 'PAYMENT');
+      const priorPayment = ledgerRepo.findByRefIdAndType(ledgerDb, reservation_id, 'PAYMENT');
       if (priorPayment) {
         const charged = Math.abs(priorPayment.amount_msat);
         return reply.send({
           settled: true as const,
           refunded_msats: reserved_msats - charged,
           actual_msats: charged,
-          remaining_balance_msats: ledgerRepo.getBalance(app.db, reserve.agent_id),
+          remaining_balance_msats: ledgerRepo.getBalance(ledgerDb, reserve.agent_id),
         });
       }
 
       // A RELEASE without a PAYMENT means the hold was already returned. Charging
       // now would debit funds that are no longer held, so refuse instead.
-      if (ledgerRepo.findByRefIdAndType(app.db, reservation_id, 'RELEASE')) {
+      if (ledgerRepo.findByRefIdAndType(ledgerDb, reservation_id, 'RELEASE')) {
         request.log.warn({ reservation_id }, 'settle refused: reservation already released');
         return reply.status(409).send({
           error: { code: 'already_released', message: 'Reservation was already released' },
@@ -173,7 +222,7 @@ export const internalBillingRoutes: FastifyPluginAsync = async (fastify) => {
       // Step 3: Atomic transaction — RELEASE + PAYMENT + audit
       app.db.transaction(() => {
         // a. RELEASE entry restores the reserved amount
-        ledgerRepo.insert(app.db, {
+        ledgerRepo.insert(ledgerDb, {
           id: generateTransactionId(),
           agent_id: reserve.agent_id,
           amount_msat: reserved_msats,
@@ -182,7 +231,7 @@ export const internalBillingRoutes: FastifyPluginAsync = async (fastify) => {
           mode: 'simulated',
         });
         // b. PAYMENT entry debits the actual cost
-        ledgerRepo.insert(app.db, {
+        ledgerRepo.insert(ledgerDb, {
           id: generateTransactionId(),
           agent_id: reserve.agent_id,
           amount_msat: -actual_msats,
@@ -191,7 +240,7 @@ export const internalBillingRoutes: FastifyPluginAsync = async (fastify) => {
           mode: 'simulated',
         });
         // c. Audit entry records settlement metadata
-        auditRepo.insert(app.db, {
+        auditRepo.insert(ledgerDb, {
           agent_id: reserve.agent_id,
           action: 'PAYMENT_SETTLED',
           amount_msat: actual_msats,
@@ -204,7 +253,7 @@ export const internalBillingRoutes: FastifyPluginAsync = async (fastify) => {
       });
 
       // Step 4: Return settled response with remaining balance
-      const remainingBalance = ledgerRepo.getBalance(app.db, reserve.agent_id);
+      const remainingBalance = ledgerRepo.getBalance(ledgerDb, reserve.agent_id);
       return reply.send({
         settled: true as const,
         refunded_msats: reserved_msats - actual_msats,
@@ -240,7 +289,7 @@ export const internalBillingRoutes: FastifyPluginAsync = async (fastify) => {
       const { reservation_id } = request.body;
 
       // Step 1: Look up RESERVE entry
-      const reserve = ledgerRepo.findById(app.db, reservation_id);
+      const reserve = ledgerRepo.findById(ledgerDb, reservation_id);
       if (!reserve || reserve.entry_type !== 'RESERVE') {
         return reply.status(404).send({
           error: { code: 'not_found', message: 'Reservation not found' },
@@ -249,20 +298,20 @@ export const internalBillingRoutes: FastifyPluginAsync = async (fastify) => {
 
       // Step 2: A settled reservation cannot be released — the caller must not
       // believe it refunded the buyer when the charge already stands.
-      if (ledgerRepo.findByRefIdAndType(app.db, reservation_id, 'PAYMENT')) {
+      if (ledgerRepo.findByRefIdAndType(ledgerDb, reservation_id, 'PAYMENT')) {
         return reply.status(409).send({
           error: { code: 'already_settled', message: 'Reservation was already settled' },
         });
       }
 
       // Idempotency: a RELEASE without a PAYMENT means it was already released
-      const existing = ledgerRepo.findByRefIdAndType(app.db, reservation_id, 'RELEASE');
+      const existing = ledgerRepo.findByRefIdAndType(ledgerDb, reservation_id, 'RELEASE');
       if (existing) {
         return reply.send({ released: true as const });
       }
 
       // Step 3: Insert RELEASE entry to return reserved balance
-      ledgerRepo.insert(app.db, {
+      ledgerRepo.insert(ledgerDb, {
         id: generateTransactionId(),
         agent_id: reserve.agent_id,
         amount_msat: Math.abs(reserve.amount_msat),

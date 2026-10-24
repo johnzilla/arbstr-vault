@@ -17,7 +17,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import Database from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import * as schema from '../../src/db/schema.js';
@@ -92,6 +92,9 @@ describe('core ↔ vault billing contract', () => {
     app = buildTestApp();
     await app.ready();
     app.db.insert(schema.agents).values({ id: AGENT_ID, name: 'Contract Agent', token_hash: hashToken(TEST_AGENT_TOKEN) }).run();
+    app.db.insert(schema.policyVersions).values({
+      agent_id: AGENT_ID, version: 1, max_transaction_msat: 50_000, daily_limit_msat: 1_000_000, effective_from: new Date(0),
+    }).run();
     app.db.insert(schema.ledgerEntries).values({
       id: 'tx_contract_deposit', agent_id: AGENT_ID, amount_msat: STARTING_BALANCE, entry_type: 'DEPOSIT', mode: 'simulated',
     }).run();
@@ -111,7 +114,7 @@ describe('core ↔ vault billing contract', () => {
     expect(body.refunded_msats).toBe(3_800);
     expect(balance()).toBe(STARTING_BALANCE - 1_200);
 
-    const audit = app.db.select().from(schema.auditLog).where(eq(schema.auditLog.ref_id, rid)).get();
+    const audit = app.db.select().from(schema.auditLog).where(and(eq(schema.auditLog.ref_id, rid), eq(schema.auditLog.action, 'PAYMENT_SETTLED'))).get();
     expect(audit?.metadata).toMatchObject({ tokens_in: 120, tokens_out: 340, provider: 'provider-alpha', latency_ms: 812 });
   });
 
@@ -153,7 +156,7 @@ describe('core ↔ vault billing contract', () => {
     expect(body.refunded_msats).toBe(0);
     expect(balance()).toBe(STARTING_BALANCE - 1_000);
 
-    const audit = app.db.select().from(schema.auditLog).where(eq(schema.auditLog.ref_id, rid)).get();
+    const audit = app.db.select().from(schema.auditLog).where(and(eq(schema.auditLog.ref_id, rid), eq(schema.auditLog.action, 'PAYMENT_SETTLED'))).get();
     expect(audit?.metadata).toMatchObject({ capped: true, requested_msats: 500_000 });
   });
 
@@ -213,6 +216,15 @@ describe('core ↔ vault billing contract', () => {
       expect(res.statusCode).toBe(401);
       expect(res.json().error.code).toBe('invalid_internal_token');
     }
+    expect(balance()).toBe(STARTING_BALANCE);
+  });
+
+  it('policy denial is 403 policy_denied, which core passes to the client as 403', async () => {
+    const res = await post('/internal/reserve', coreReserveBody(60_000)); // above max_transaction_msat
+    expect(res.statusCode).toBe(403);
+    const body = res.json();
+    expect(body.error.code).toBe('policy_denied');
+    expect(body.reason).toMatch(/^exceeds_max_transaction/);
     expect(balance()).toBe(STARTING_BALANCE);
   });
 });

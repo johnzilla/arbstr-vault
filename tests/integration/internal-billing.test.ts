@@ -17,7 +17,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import Database from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import * as schema from '../../src/db/schema.js';
@@ -51,6 +51,16 @@ async function setupTestAgent(app: ReturnType<typeof buildApp>) {
     id: 'ag_test123',
     name: 'Test Agent',
     token_hash: tokenHash,
+  }).run();
+
+  // Permissive policy so these tests exercise billing, not limits
+  // (policy enforcement is covered in internal-billing-policy.test.ts)
+  app.db.insert(schema.policyVersions).values({
+    agent_id: 'ag_test123',
+    version: 1,
+    max_transaction_msat: 10_000_000,
+    daily_limit_msat: 100_000_000,
+    effective_from: new Date(0),
   }).run();
 
   // Give agent 100,000 msats balance
@@ -424,7 +434,7 @@ describe('POST /internal/settle', () => {
     const auditEntry = app.db
       .select()
       .from(schema.auditLog)
-      .where(eq(schema.auditLog.ref_id, reservationId))
+      .where(and(eq(schema.auditLog.ref_id, reservationId), eq(schema.auditLog.action, 'PAYMENT_SETTLED')))
       .get();
 
     expect(auditEntry).toBeDefined();

@@ -74,6 +74,28 @@ export const ledgerRepo = {
   },
 
   /**
+   * Return the total currently held by open reservations for an agent (positive msat).
+   * A RESERVE is open until a RELEASE references it via ref_id (settle and release
+   * both write one). Counted against the daily limit so concurrent in-flight
+   * requests cannot together exceed it before any of them settles.
+   */
+  getOpenReservedTotal(db: Db, agentId: string): number {
+    const result = db.select({
+      held: sql<number>`COALESCE(SUM(ABS(${ledgerEntries.amount_msat})), 0)`,
+    })
+      .from(ledgerEntries)
+      .where(
+        and(
+          eq(ledgerEntries.agent_id, agentId),
+          eq(ledgerEntries.entry_type, 'RESERVE'),
+          sql`NOT EXISTS (SELECT 1 FROM ledger_entries rel WHERE rel.entry_type = 'RELEASE' AND rel.ref_id = ${ledgerEntries.id})`,
+        ),
+      )
+      .get();
+    return result?.held ?? 0;
+  },
+
+  /**
    * Cursor-paginated list of ledger entries for an agent.
    * Cursor is the last seen id; returns entries with id > cursor (descending by id).
    */
