@@ -28,7 +28,7 @@ export class CashuClient {
 
   /**
    * Load mint info, keysets, and keys from the mint.
-   * MUST be called before any other operation (Pitfall 5: constructor makes no network calls).
+   * MUST be called before any other operation (the constructor makes no network calls).
    */
   async initialize(): Promise<void> {
     await this.wallet.loadMint();
@@ -108,7 +108,7 @@ export class CashuClient {
 
   /**
    * Select proofs to send for a given amount from a pool.
-   * Uses cashu-ts coin selection — NEVER hand-roll denomination math (Pitfall 1).
+   * Uses cashu-ts coin selection — NEVER hand-roll denomination math.
    *
    * @param amount Target amount in sat (include fee_reserve for melt operations).
    * @param proofs Available proof pool.

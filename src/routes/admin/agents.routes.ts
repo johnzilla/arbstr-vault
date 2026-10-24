@@ -141,7 +141,7 @@ export const adminAgentRoutes: FastifyPluginAsync = async (fastify) => {
     },
   );
 
-  // PATCH /operator/agents/:id/policy — update agent policy (versioned, Phase 4+)
+  // PATCH /operator/agents/:id/policy — update agent policy (append-only versioned)
   app.patch(
     '/operator/agents/:id/policy',
     {

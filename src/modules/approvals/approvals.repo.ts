@@ -99,7 +99,7 @@ export const approvalsRepo = {
 
   /**
    * Count pending approvals for an agent.
-   * Used by the operator dashboard (Plan 03).
+   * Used by the operator dashboard.
    */
   countPending(db: Db, agentId: string): number {
     const result = db

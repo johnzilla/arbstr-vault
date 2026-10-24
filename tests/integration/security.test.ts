@@ -1,10 +1,10 @@
 /**
- * Security and balance isolation tests (Plan 05)
+ * Security and balance isolation tests
  *
  * Tests:
  * - Pino token redaction: vtk_ tokens and related fields are masked before serialization
- * - Balance isolation: each agent's sub-account is independent (AGNT-02)
- * - Cross-agent access: agents cannot read/modify each other's resources (SEC-06)
+ * - Balance isolation: each agent's sub-account is independent
+ * - Cross-agent access: agents cannot read/modify each other's resources
  * - Fail-closed: service errors produce DENY, not crashes or HTTP 500s
  */
 
@@ -223,10 +223,10 @@ describe('Token Redaction', () => {
 });
 
 // ============================================================
-// Balance Isolation Tests (AGNT-02)
+// Balance Isolation Tests
 // ============================================================
 
-describe('Balance Isolation (AGNT-02)', () => {
+describe('Balance Isolation', () => {
   let app: FastifyInstance;
 
   beforeEach(async () => {
@@ -331,10 +331,10 @@ describe('Balance Isolation (AGNT-02)', () => {
 });
 
 // ============================================================
-// Fail-Closed Tests (SEC-06)
+// Fail-Closed Tests
 // ============================================================
 
-describe('Fail-Closed on Service Errors (SEC-06)', () => {
+describe('Fail-Closed on Service Errors', () => {
   it('paymentsService.processPayment returns DENY when database throws', async () => {
     // Set up a proper DB, register an agent, then close the sqlite connection
     // to simulate mid-request DB failure at the payment service level.

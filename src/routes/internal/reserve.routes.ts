@@ -17,7 +17,7 @@ export const internalBillingRoutes: FastifyPluginAsync = async (fastify) => {
   const app = fastify.withTypeProvider<ZodTypeProvider>();
   const ledgerDb = app.db as unknown as Db;
 
-  // Gate all internal routes behind X-Internal-Token (per D-01)
+  // Gate all internal routes behind X-Internal-Token
   app.addHook('onRequest', internalAuth);
 
   app.post(
@@ -25,10 +25,10 @@ export const internalBillingRoutes: FastifyPluginAsync = async (fastify) => {
     {
       schema: {
         body: z.object({
-          agent_token: z.string(),              // per D-05: raw vtk_ token
+          agent_token: z.string(),              // raw vtk_ token
           amount_msats: z.number().int().nonnegative(), // 0 allowed: free local-tier providers
-          correlation_id: z.string(),            // per D-05: ties to arbstr request
-          model: z.string(),                     // per D-05: LLM model name
+          correlation_id: z.string(),            // ties to arbstr request
+          model: z.string(),                     // LLM model name
         }),
         response: {
           200: z.object({
@@ -53,7 +53,7 @@ export const internalBillingRoutes: FastifyPluginAsync = async (fastify) => {
     async (request, reply) => {
       const { agent_token, amount_msats, correlation_id, model } = request.body;
 
-      // Step 1: Resolve agent from token (per BILL-02, D-05)
+      // Step 1: Resolve agent from token
       const tokenHash = hashToken(agent_token);
       const agent = agentsRepo.findByTokenHash(app.db, tokenHash);
       if (!agent) {
@@ -94,9 +94,9 @@ export const internalBillingRoutes: FastifyPluginAsync = async (fastify) => {
         });
 
         if (result.outcome === 'ALLOW') {
-          // Step 3: Insert RESERVE ledger entry (per BILL-04)
+          // Step 3: Insert RESERVE ledger entry
           // Amount is NEGATIVE (reserve reduces available balance)
-          // mode is 'simulated' (per D-10, all billing is ledger-only)
+          // mode is 'simulated' (all billing is ledger-only)
           ledgerRepo.insert(ledgerDb, {
             id: reservationId,
             agent_id: agent.id,
@@ -124,7 +124,7 @@ export const internalBillingRoutes: FastifyPluginAsync = async (fastify) => {
         });
       }
 
-      // Step 4: Return reservation_id and remaining balance (per D-08)
+      // Step 4: Return reservation_id and remaining balance
       const remainingBalance = ledgerRepo.getBalance(ledgerDb, agent.id);
       return reply.send({
         reservation_id: reservationId,
@@ -133,7 +133,7 @@ export const internalBillingRoutes: FastifyPluginAsync = async (fastify) => {
     },
   );
 
-  // POST /internal/settle — settle a reservation at actual cost (per BILL-05..BILL-08)
+  // POST /internal/settle — settle a reservation at actual cost
   //
   // Body shape matches arbstr core's VaultClient::settle: usage details nested
   // under `metadata`, with tokens as Option<u32> (null when the provider did not
@@ -263,7 +263,7 @@ export const internalBillingRoutes: FastifyPluginAsync = async (fastify) => {
     },
   );
 
-  // POST /internal/release — release an unused reservation (per BILL-09, BILL-10)
+  // POST /internal/release — release an unused reservation
   app.post(
     '/internal/release',
     {

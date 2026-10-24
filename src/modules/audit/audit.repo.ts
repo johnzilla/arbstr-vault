@@ -90,7 +90,7 @@ export const auditRepo = {
   /**
    * Get the timestamp of the most recent PAYMENT_SETTLED or PAYMENT_FAILED audit entry for an agent.
    * Returns the ISO string, or null if no payments have been processed.
-   * Used by the operator dashboard (Plan 03) for last_payment_at field.
+   * Used by the operator dashboard for the last_payment_at field.
    */
   getLastPaymentTimestamp(db: Db, agentId: string): string | null {
     const row = db.select({ created_at: auditLog.created_at })

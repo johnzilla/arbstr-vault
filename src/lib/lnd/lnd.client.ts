@@ -29,7 +29,7 @@ export function createLndConnection(opts: {
 }
 
 /**
- * Verify the loaded macaroon does NOT have onchain:read permission (SEC-05).
+ * Verify the loaded macaroon does NOT have onchain:read permission.
  *
  * A correctly scoped payment macaroon (info:read invoices:read invoices:write
  * offchain:read offchain:write) does NOT have onchain:read. Calling
@@ -39,7 +39,7 @@ export function createLndConnection(opts: {
  * If the call fails with a permission error, the macaroon is correctly scoped
  * and startup proceeds silently.
  *
- * Implements SEC-05: LND macaroon is scoped to invoice+offchain operations only.
+ * The LND macaroon must be scoped to invoice+offchain operations only.
  */
 export async function verifyMacaroonScope(lnd: AuthenticatedLnd): Promise<void> {
   try {
@@ -64,7 +64,7 @@ export async function verifyMacaroonScope(lnd: AuthenticatedLnd): Promise<void> 
  *
  * Steps per attempt:
  *   1. Create gRPC connection
- *   2. Verify macaroon scope (SEC-05) — fatal failure exits immediately
+ *   2. Verify macaroon scope — fatal failure exits immediately
  *   3. getWalletInfo health check (requires info:read)
  *
  * Retry delays: [1s, 2s, 4s, 8s, 16s]
@@ -100,7 +100,7 @@ export async function connectWithRetry(opts: {
         socket: opts.socket,
       });
 
-      // SEC-05: verify macaroon is not overprivileged — fatal, no retry
+      // Verify macaroon is not overprivileged — fatal, no retry
       await verifyMacaroonScope(lnd);
 
       // Health check: getWalletInfo requires info:read in the macaroon scope

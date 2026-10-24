@@ -1,9 +1,9 @@
 /**
- * Approval lifecycle tests (Plan 04-02)
+ * Approval lifecycle tests
  *
  * Validates:
- * - PLCY-06: Over-limit transactions with approval_timeout_ms route to PENDING_APPROVAL
- * - PLCY-07: Pending approvals time out to DENY after configurable interval
+ * - Over-limit transactions with approval_timeout_ms route to PENDING_APPROVAL
+ * - Pending approvals time out to DENY after configurable interval
  * - Operator can approve/deny via REST API
  * - CAS prevents race between manual resolution and timeout
  * - Payment status route returns PENDING_APPROVAL for approval-pending payments
@@ -105,7 +105,7 @@ async function submitPayment(app: FastifyInstance, agentId: string, token: strin
   return res;
 }
 
-describe('Approval lifecycle (PLCY-06, PLCY-07)', () => {
+describe('Approval lifecycle', () => {
   // Test 1: Payment exceeding max_transaction_msat with approval_timeout_ms returns PENDING_APPROVAL
   it('returns PENDING_APPROVAL for over-limit payment when approval_timeout_ms is configured', async () => {
     const { app, db } = buildTestApp();

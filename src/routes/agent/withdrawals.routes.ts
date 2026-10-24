@@ -78,7 +78,7 @@ export const agentWithdrawalRoutes: FastifyPluginAsync = async (fastify) => {
         });
       }
 
-      // 4. Run policy evaluation (Research Pitfall 6):
+      // 4. Run policy evaluation before queueing:
       //    Policy checks prevent over-limit withdrawals from entering the queue.
       //    Read balance and daily spend for evaluation.
       const balance = ledgerRepo.getBalance(narrowDb, id);

@@ -15,7 +15,7 @@ export const alertsService = {
    * If below floor and cooldown has elapsed, fire a balance_alert webhook.
    *
    * MUST only be called after a payment SETTLES (not after RESERVE).
-   * Research Pitfall 4: firing alert after RESERVE produces spurious alerts for payments that fail.
+   * Firing the alert after RESERVE produces spurious alerts for payments that fail.
    *
    * This is fire-and-forget — callers use .catch(() => {}) and must not await.
    */

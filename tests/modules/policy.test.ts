@@ -129,7 +129,7 @@ describe('evaluatePolicy', () => {
 
   it('REQUIRE_HUMAN_APPROVAL is a valid PolicyOutcome type', () => {
     // Type-level verification that REQUIRE_HUMAN_APPROVAL is part of PolicyOutcome union.
-    // This type is reserved for Phase 4 escalation paths but must exist in the type system.
+    // evaluatePolicy returns it for over-max requests when approval_timeout_ms is configured.
     const humanApproval: PolicyOutcome = 'REQUIRE_HUMAN_APPROVAL';
     expect(humanApproval).toBe('REQUIRE_HUMAN_APPROVAL');
 
