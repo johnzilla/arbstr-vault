@@ -31,7 +31,7 @@ To run the full stack (core + vault + LND + Cashu mint) with a single `docker co
 - **Versioned policies** — Append-only policy history with point-in-time evaluation
 - **Balance alerts** — Per-agent floor threshold with webhook notification and cooldown
 - **Operator dashboard** — All agents, balances, spend, utilization, policy state in one call
-- **Audit log** — Append-only and written atomically with every ledger update. Agents read their own history via `/agents/:id/history`
+- **Audit log** — Append-only and written atomically with every ledger update. Operators query it via `/operator/audit`; agents read their own history via `/agents/:id/history`
 - **Withdrawals** — Agent-initiated with mandatory operator approval
 - **Internal billing API** — Reserve/settle/release flow for service-to-service billing (e.g., per-request LLM costs), with policy enforcement and automatic release of stale reservations
 - **Internal auth** — Shared secret token via `X-Internal-Token` header with constant-time comparison
@@ -100,6 +100,9 @@ All routes use JSON. Agent routes require a bearer token from registration. Oper
 | `POST` | `/operator/approvals/:id/deny` | Deny a pending payment or withdrawal |
 | `GET` | `/operator/approvals` | List approvals (`?status=pending` or `all`) |
 | `GET` | `/operator/dashboard` | Full agent dashboard |
+| `GET` | `/operator/audit` | Query the audit log across all agents |
+
+`GET /operator/audit` returns entries newest first, 50 per page (`limit` up to 200), with `next_cursor` for the next page. Filters, all optional and combinable: `agent_id` (use `system` for entries not tied to an agent), `action` (one action or a comma-separated list, e.g. `WEBHOOK_DELIVERY_FAILED,APPROVAL_TIMEOUT`), `ref_id` (a transaction or reservation id), and `start_date` / `end_date` (ms since epoch, inclusive). An unknown action or a reversed range returns 400.
 
 New agents start with a deny-all policy. The policy body takes `max_transaction_msat` and `daily_limit_msat`, plus optional `max_fee_msat`, `approval_timeout_ms` (30s–1h, default 5 min), `alert_floor_msat` and `alert_cooldown_ms` (min 60s) for balance alerts.
 
