@@ -93,7 +93,7 @@ export const adminApprovalsRoutes: FastifyPluginAsync = async (fastify) => {
         transaction_id: claimed.transaction_id,
         amount_msat: claimed.amount_msat,
         payment_status: executionResult.status,
-      }).catch(() => {});
+      }, db).catch(() => {});
 
       return reply.send({
         approval_id: claimed.id,
@@ -180,7 +180,7 @@ export const adminApprovalsRoutes: FastifyPluginAsync = async (fastify) => {
         agent_id: claimed.agent_id,
         transaction_id: claimed.transaction_id,
         amount_msat: claimed.amount_msat,
-      }).catch(() => {});
+      }, db).catch(() => {});
 
       return reply.send({
         approval_id: claimed.id,

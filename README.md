@@ -158,7 +158,7 @@ When `OPERATOR_WEBHOOK_URL` is set, arbstr-vault POSTs JSON events to that URL.
 - **Events:** `approval_required`, `approval_granted`, `approval_denied`, `approval_timeout`, `withdrawal_requested`, `balance_alert`.
 - **Header:** `X-ArbstrVault-Signature` — hex HMAC-SHA256 of the raw request body using `OPERATOR_WEBHOOK_SECRET`. If no secret is configured, the value is the literal string `unsigned`.
 - **Payload:** JSON with `event`, optional `agent_id`/`transaction_id`/`amount_msat`, plus a `timestamp` (ms since epoch). `approval_granted` adds `payment_status`; `balance_alert` adds `balance_msat` and `alert_floor_msat`.
-- **Delivery:** fire-and-forget with 3 retries (1s, 5s, 15s backoff) and a 10s per-attempt timeout. A delivery that fails every attempt is dropped; it is not recorded anywhere.
+- **Delivery:** fire-and-forget with 3 retries (1s, 5s, 15s backoff) and a 10s per-attempt timeout. A delivery that fails every attempt is written to the audit log as `WEBHOOK_DELIVERY_FAILED`, with the event type, attempt count and last error (`HTTP 500`, `timeout`, ...); `ref_id` is the event's transaction id, and events without an agent are logged under `system`.
 
 > **Breaking change (2026-04-18):** the signature header was renamed from `X-Vaultwarden-Signature` to `X-ArbstrVault-Signature`. Update any consumer that asserts on the header name.
 

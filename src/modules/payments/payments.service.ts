@@ -444,7 +444,7 @@ export function createPaymentsService(walletOrOptions: WalletBackend | PaymentsS
             agent_id: agentId,
             transaction_id: txId,
             amount_msat: request.amount_msat,
-          }).catch(() => {});
+          }, db as unknown as Db).catch(() => {});
 
           return {
             transaction_id: txId,

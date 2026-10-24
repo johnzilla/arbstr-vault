@@ -1,5 +1,9 @@
 import { createHmac } from 'crypto';
+import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { config } from '../../config.js';
+import { auditRepo, type AuditEntry } from '../audit/audit.repo.js';
+
+type Db = BetterSQLite3Database<Record<string, never>>;
 
 export interface WebhookEvent {
   event: string;
@@ -9,9 +13,26 @@ export interface WebhookEvent {
   [key: string]: unknown;
 }
 
-async function deliverWithRetry(url: string, payload: string, sig: string): Promise<void> {
-  const delays = [1000, 5000, 15000];
-  for (let attempt = 0; attempt <= 3; attempt++) {
+export interface WebhookServiceDeps {
+  auditInsert?: (db: Db, entry: AuditEntry) => void;
+  /** Delay before each retry; one retry per entry. */
+  retryDelaysMs?: number[];
+  /** Override OPERATOR_WEBHOOK_URL / OPERATOR_WEBHOOK_SECRET (tests). */
+  url?: string;
+  secret?: string;
+}
+
+const DEFAULT_RETRY_DELAYS_MS = [1000, 5000, 15000];
+
+/** Returns the number of attempts made and the last failure, or null on success. */
+async function deliverWithRetry(
+  url: string,
+  payload: string,
+  sig: string,
+  delays: number[],
+): Promise<{ attempts: number; error: string } | null> {
+  let error = '';
+  for (let attempt = 0; attempt <= delays.length; attempt++) {
     try {
       const res = await fetch(url, {
         method: 'POST',
@@ -19,30 +40,48 @@ async function deliverWithRetry(url: string, payload: string, sig: string): Prom
         body: payload,
         signal: AbortSignal.timeout(10_000),
       });
-      if (res.ok) return;
-    } catch { /* network error — retry */ }
-    if (attempt < 3) await new Promise(r => setTimeout(r, delays[attempt]));
+      if (res.ok) return null;
+      error = `HTTP ${res.status}`;
+    } catch (err) {
+      error = err instanceof Error ? err.name === 'TimeoutError' ? 'timeout' : err.message : String(err);
+    }
+    if (attempt < delays.length) await new Promise(r => setTimeout(r, delays[attempt]));
   }
-  throw new Error('webhook_delivery_failed');
+  return { attempts: delays.length + 1, error };
 }
 
-export function createWebhookService(deps?: { auditInsert?: (entry: any) => void }) {
+export function createWebhookService(deps: WebhookServiceDeps = {}) {
+  const auditInsert = deps.auditInsert ?? auditRepo.insert;
+  const delays = deps.retryDelaysMs ?? DEFAULT_RETRY_DELAYS_MS;
+
   return {
-    async send(event: WebhookEvent, db?: any): Promise<void> {
-      const url = config.OPERATOR_WEBHOOK_URL;
+    /**
+     * Deliver an event to the operator webhook, retrying on failure.
+     * A delivery that fails every attempt is audited as WEBHOOK_DELIVERY_FAILED.
+     */
+    async send(event: WebhookEvent, db: Db): Promise<void> {
+      const url = deps.url ?? config.OPERATOR_WEBHOOK_URL;
       if (!url) return;
+      const secret = deps.secret ?? config.OPERATOR_WEBHOOK_SECRET;
       const payload = JSON.stringify({ ...event, timestamp: Date.now() });
-      const sig = config.OPERATOR_WEBHOOK_SECRET
-        ? createHmac('sha256', config.OPERATOR_WEBHOOK_SECRET).update(payload).digest('hex')
+      const sig = secret
+        ? createHmac('sha256', secret).update(payload).digest('hex')
         : 'unsigned';
+
+      const failure = await deliverWithRetry(url, payload, sig, delays);
+      if (!failure) return;
+
       try {
-        await deliverWithRetry(url, payload, sig);
-      } catch {
-        // Log failure to audit if db provided
-        if (db && deps?.auditInsert) {
-          deps.auditInsert({ agent_id: event.agent_id ?? 'system',
-            action: 'WEBHOOK_DELIVERY_FAILED', metadata: { event_type: event.event } });
-        }
+        auditInsert(db, {
+          agent_id: event.agent_id ?? 'system',
+          action: 'WEBHOOK_DELIVERY_FAILED',
+          amount_msat: event.amount_msat,
+          ref_id: event.transaction_id,
+          metadata: { event_type: event.event, attempts: failure.attempts, last_error: failure.error },
+        });
+      } catch (err) {
+        // The DB may be gone if the server shut down during retries
+        console.error('[webhookService] failed to audit webhook delivery failure', { event: event.event, err });
       }
     },
   };
