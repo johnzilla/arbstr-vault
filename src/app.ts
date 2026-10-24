@@ -5,6 +5,7 @@ import { adminAgentRoutes } from './routes/admin/agents.routes.js';
 import { adminDepositRoutes } from './routes/admin/deposit.routes.js';
 import { adminApprovalsRoutes } from './routes/admin/approvals.routes.js';
 import { adminDashboardRoutes } from './routes/admin/dashboard.routes.js';
+import { adminAuditRoutes } from './routes/admin/audit.routes.js';
 import { agentBalanceRoutes } from './routes/agent/balance.routes.js';
 import { agentHistoryRoutes } from './routes/agent/history.routes.js';
 import { agentPaymentRoutes } from './routes/agent/payments.routes.js';
@@ -132,6 +133,7 @@ export function buildApp(
   app.register(adminDepositRoutes);
   app.register(adminApprovalsRoutes);
   app.register(adminDashboardRoutes);
+  app.register(adminAuditRoutes);
 
   // Agent routes (agent-scoped)
   app.register(agentBalanceRoutes);

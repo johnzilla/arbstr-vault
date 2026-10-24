@@ -1,10 +1,10 @@
-import { eq, and, gt, gte, lte, desc, inArray } from 'drizzle-orm';
+import { eq, and, gt, lt, gte, lte, desc, inArray } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { auditLog } from '../../db/schema.js';
 
 type Db = BetterSQLite3Database<Record<string, never>>;
 
-type AuditAction =
+export type AuditAction =
   | 'AGENT_REGISTERED'
   | 'POLICY_UPDATED'
   | 'PAYMENT_REQUEST'
@@ -72,6 +72,48 @@ export const auditRepo = {
     }
     if (opts.action_type) {
       conditions.push(eq(auditLog.action, opts.action_type));
+    }
+    if (opts.start_date !== undefined) {
+      conditions.push(gte(auditLog.created_at, new Date(opts.start_date)));
+    }
+    if (opts.end_date !== undefined) {
+      conditions.push(lte(auditLog.created_at, new Date(opts.end_date)));
+    }
+    return db.select()
+      .from(auditLog)
+      .where(and(...conditions))
+      .orderBy(desc(auditLog.id))
+      .limit(opts.limit)
+      .all();
+  },
+
+  /**
+   * Cursor-paginated audit query across all agents, newest first.
+   * All filters are optional; `actions` matches any of the listed actions.
+   * The cursor is the id of the last entry on the previous page.
+   * Used by the operator audit endpoint.
+   */
+  listForOperator(db: Db, opts: {
+    cursor?: string;
+    limit: number;
+    agent_id?: string;
+    actions?: AuditAction[];
+    ref_id?: string;
+    start_date?: number;
+    end_date?: number;
+  }) {
+    const conditions = [];
+    if (opts.cursor) {
+      conditions.push(lt(auditLog.id, opts.cursor));
+    }
+    if (opts.agent_id) {
+      conditions.push(eq(auditLog.agent_id, opts.agent_id));
+    }
+    if (opts.actions?.length) {
+      conditions.push(inArray(auditLog.action, opts.actions));
+    }
+    if (opts.ref_id) {
+      conditions.push(eq(auditLog.ref_id, opts.ref_id));
     }
     if (opts.start_date !== undefined) {
       conditions.push(gte(auditLog.created_at, new Date(opts.start_date)));
