@@ -80,6 +80,13 @@ async function main() {
   try {
     await app.listen({ port: config.PORT, host: '0.0.0.0' });
     app.log.info(`arbstr-vault started on port ${config.PORT} (wallet: ${config.WALLET_BACKEND})`);
+    if (config.OPERATOR_WEBHOOK_URL && !config.OPERATOR_WEBHOOK_SECRET) {
+      app.log.warn(
+        'OPERATOR_WEBHOOK_URL is set without OPERATOR_WEBHOOK_SECRET: webhooks are sent with ' +
+          "X-ArbstrVault-Signature: unsigned, so the receiver cannot tell them from forgeries. " +
+          'Set OPERATOR_WEBHOOK_SECRET (min 16 chars) to sign them.',
+      );
+    }
   } catch (err) {
     app.log.error(err);
     process.exit(1);

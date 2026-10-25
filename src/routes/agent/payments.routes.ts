@@ -55,6 +55,18 @@ export const agentPaymentRoutes: FastifyPluginAsync = async (fastify) => {
       const body = request.body;
       const db = app.db as unknown as DB;
 
+      // Lightning and Cashu rails can only pay a BOLT11 invoice; any other destination
+      // would fail at the wallet, after policy evaluation and the RESERVE
+      if (body.destination_type !== 'lightning_invoice' && app.paymentsService.hasRealRail) {
+        return reply.status(400).send({
+          error: {
+            code: 'unsupported_destination_type',
+            message: `destination_type '${body.destination_type}' is only payable with WALLET_BACKEND=simulated; ` +
+              `the Lightning and Cashu rails pay BOLT11 invoices (destination_type 'lightning_invoice')`,
+          },
+        });
+      }
+
       // Reject unusable invoices before policy evaluation, so nothing is reserved or audited
       if (body.destination_type === 'lightning_invoice') {
         const check = checkInvoice(body.destination, body.amount_msat);
