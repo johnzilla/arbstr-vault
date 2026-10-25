@@ -21,6 +21,7 @@ import { buildApp } from '../../src/app.js';
 import { ledgerRepo } from '../../src/modules/ledger/ledger.repo.js';
 import { LightningStreamError } from '../../src/modules/payments/wallet/lightning.wallet.js';
 import type { WalletBackend, PaymentResult } from '../../src/modules/payments/wallet/wallet.interface.js';
+import { makeInvoice } from '../helpers/invoice.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const MIGRATIONS_FOLDER = join(__dirname, '../../src/db/migrations');
@@ -30,7 +31,6 @@ process.env.VAULT_ADMIN_TOKEN = ADMIN;
 
 type Db = BetterSQLite3Database<Record<string, never>>;
 
-const INVOICE = 'lnbcrt100n1pexampleinvoice';
 const START = 1_000_000;
 
 function mockWallet(mode: 'lightning' | 'cashu', result: Partial<PaymentResult> | Error) {
@@ -73,10 +73,14 @@ describe('approved payments use the configured wallet', () => {
     app.db.select().from(schema.auditLog)
       .where(and(eq(schema.auditLog.ref_id, txId), eq(schema.auditLog.action, action))).get();
 
+  // A real signed regtest invoice for exactly the requested amount
+  let invoice = '';
+
   async function requestPayment(amount: number) {
+    invoice = makeInvoice({ amountMsat: amount });
     const res = await app.inject({
       method: 'POST', url: `/agents/${agentId}/pay`, headers: { authorization: `Bearer ${token}` },
-      payload: { amount_msat: amount, asset: 'BTC_lightning', purpose: 'p', destination_type: 'lightning_invoice', destination: INVOICE },
+      payload: { amount_msat: amount, asset: 'BTC_lightning', purpose: 'p', destination_type: 'lightning_invoice', destination: invoice },
     });
     expect(res.json().status).toBe('PENDING_APPROVAL');
     return res.json().transaction_id as string;
@@ -101,7 +105,7 @@ describe('approved payments use the configured wallet', () => {
 
     expect(ln.pay).toHaveBeenCalledOnce();
     expect(ln.pay.mock.calls[0][0]).toMatchObject({
-      destination: INVOICE, destination_type: 'lightning_invoice', amount_msat: 20_000, max_fee_msat: 2_000,
+      destination: invoice, destination_type: 'lightning_invoice', amount_msat: 20_000, max_fee_msat: 2_000,
     });
     expect(balance()).toBe(START - 20_000 - 700);
     const reserve = entries(txId).find((e) => e.entry_type === 'RESERVE')!;
@@ -153,14 +157,14 @@ describe('approved payments use the configured wallet', () => {
     await setup({ wallet: ln });
     const res = await app.inject({
       method: 'POST', url: `/agents/${agentId}/withdrawals`, headers: { authorization: `Bearer ${token}` },
-      payload: { destination: INVOICE, amount_msat: 30_000 },
+      payload: { destination: (invoice = makeInvoice({ amountMsat: 30_000 })), amount_msat: 30_000 },
     });
     const txId = res.json().transaction_id as string;
     expect(entries(txId).find((e) => e.entry_type === 'RESERVE')?.mode).toBe('simulated');
 
     expect(await approve(txId)).toBe('SETTLED');
 
-    expect(ln.pay.mock.calls[0][0]).toMatchObject({ destination: INVOICE, amount_msat: 30_000 });
+    expect(ln.pay.mock.calls[0][0]).toMatchObject({ destination: invoice, amount_msat: 30_000 });
     expect(entries(txId).find((e) => e.entry_type === 'RESERVE')).toMatchObject({ mode: 'lightning', payment_hash: 'hash-wd' });
     expect(balance()).toBe(START - 30_000);
   });
