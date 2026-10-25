@@ -19,7 +19,7 @@ Built for personal use — the sole customer is the operator plus their own agen
 
 arbstr-vault is the treasury half of the [arbstr](https://github.com/johnzilla/arbstr) inference marketplace. arbstr core routes LLM requests to the cheapest qualified provider and calls vault's `/internal/reserve → settle|release` endpoints per request to meter spend against agent sub-accounts. Vault is also usable standalone as a personal agent bank — nothing in this repo depends on arbstr code.
 
-To run the full stack (core + vault + LND + Cashu mint) with a single `docker compose up`, see [arbstr-node](https://github.com/johnzilla/arbstr-node).
+To run the full stack (core + vault + LND + Cashu mint) with a single `docker compose up`, see [arbstr-node](https://github.com/johnzilla/arbstr-node), which runs the published `ghcr.io/johnzilla/arbstr-vault` image pinned to a [release](https://github.com/johnzilla/arbstr-vault/releases).
 
 ## Features
 
@@ -53,6 +53,13 @@ npm run dev
 ```
 
 The service starts on `http://localhost:3000` with `WALLET_BACKEND=simulated` by default.
+
+Or run the published image (multi-arch; `:latest` tracks main, releases publish `:X.Y.Z`):
+
+```bash
+docker run -p 3000:3000 -v vault-data:/data -e DATABASE_PATH=/data/vault.db \
+  -e VAULT_ADMIN_TOKEN="$(openssl rand -hex 32)" ghcr.io/johnzilla/arbstr-vault:latest
+```
 
 ## Environment Variables
 
@@ -231,6 +238,14 @@ See comments in `docker-compose.dev.yml` for manual channel setup steps.
 | Lightning | lightning (npm) → LND gRPC |
 | Cashu | cashu-ts v3.5 → Nutshell mint |
 | Testing | Vitest |
+
+## Related Projects
+
+- [arbstr](https://github.com/johnzilla/arbstr) -- Routing engine: OpenAI-compatible proxy that picks the cheapest qualified provider
+- [arbstr-vault](https://github.com/johnzilla/arbstr-vault) -- Treasury: agent accounts, spending policy, per-request billing, Lightning and Cashu rails
+- [arbstr-node](https://github.com/johnzilla/arbstr-node) -- The full stack (core + vault + LND + Cashu mint) as one `docker compose up`, pinned to released versions
+- [mesh-llm](https://docs.anarchai.org) -- Distributed P2P inference network (local provider)
+- [Routstr](https://routstr.com) -- Decentralized LLM marketplace
 
 ## License
 
