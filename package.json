@@ -1,6 +1,6 @@
 {
   "name": "arbstr-vault",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "description": "Agent treasury service: per-agent balances, spending policy, Lightning and Cashu rails, and internal billing for arbstr",
   "type": "module",
   "scripts": {

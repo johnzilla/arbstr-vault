@@ -3,11 +3,12 @@ FROM node:22-slim
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-RUN npm ci --production=false
+# Dev dependencies included: the server runs TypeScript through tsx
+RUN npm ci
 
 COPY . .
 
-RUN npm run db:generate || true
+# Migrations are committed (src/db/migrations) and applied on startup
 
 EXPOSE 3000
 

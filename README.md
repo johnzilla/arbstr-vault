@@ -182,6 +182,21 @@ npm run db:generate
 docker compose -f docker-compose.dev.yml up -d
 ```
 
+### Releases
+
+Versions are semver; `package.json`'s `version` is the source of truth. CI publishes `ghcr.io/johnzilla/arbstr-vault:latest` and `:<short-sha>` (amd64 + arm64) on every merge to main. To release:
+
+1. In a PR, bump `version` in `package.json` (`npm version X.Y.Z --no-git-tag-version` updates the lockfile too).
+2. After it merges, push a signed tag from main (`git config --global tag.gpgSign true`):
+   ```bash
+   git switch main && git pull
+   git tag -a vX.Y.Z -m "arbstr-vault vX.Y.Z"
+   git push origin vX.Y.Z
+   ```
+3. CI checks the tag against `package.json`, publishes `:X.Y.Z` and `:X.Y`, attaches signed build provenance, and creates the GitHub Release. Verify an image with `gh attestation verify oci://ghcr.io/johnzilla/arbstr-vault:X.Y.Z --owner johnzilla`.
+
+[arbstr-node](https://github.com/johnzilla/arbstr-node) runs a released image. The `v1.0` and `v1.1` tags predate this and have no images or releases.
+
 ### Regtest Environment
 
 The `docker-compose.dev.yml` provides:
