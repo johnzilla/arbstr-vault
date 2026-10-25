@@ -57,6 +57,10 @@ export class LightningWallet implements WalletBackend {
       // the 'paying' handler — store hash in closure instead
       let paymentHashInMemory: string | undefined;
 
+      // Units: in the `lightning` library "tokens" are satoshis and "mtokens"
+      // are millisatoshis (bolt00/mtokens_amount.js: mtokens = tokens * 1000),
+      // and max_fee_mtokens is passed to LND as fee_limit_msat. So msat values
+      // map to mtokens 1:1 here and for fee_mtokens below — no conversion.
       const sub = subscribeToPayViaRequest({
         lnd: this.lnd,
         request: req.destination, // BOLT11 invoice string
