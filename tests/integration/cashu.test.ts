@@ -25,6 +25,7 @@ import { buildApp } from '../../src/app.js';
 import type { FastifyInstance } from 'fastify';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { WalletBackend } from '../../src/modules/payments/wallet/wallet.interface.js';
+import { makeInvoice } from '../helpers/invoice.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const MIGRATIONS_FOLDER = join(__dirname, '../../src/db/migrations');
@@ -162,7 +163,7 @@ async function pay(
       asset: opts.asset ?? 'BTC_cashu',
       purpose: 'Cashu test payment',
       destination_type: 'lightning_invoice',
-      destination: 'lnbc1p0testinvoice...',
+      destination: makeInvoice({ amountMsat: amount_msat }),
       ...(opts.preferred_rail ? { preferred_rail: opts.preferred_rail } : {}),
     },
   });
@@ -447,7 +448,7 @@ describe('Cashu wallet — routing and melt flow', () => {
         asset: 'BTC_cashu',
         purpose: 'test',
         destination_type: 'lightning_invoice',
-        destination: 'lnbc...',
+        destination: makeInvoice({ amountMsat: 500_000 }),
         preferred_rail: 'invalid_value',
       },
     });

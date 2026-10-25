@@ -2,6 +2,7 @@ import type { FastifyPluginAsync } from 'fastify';
 import { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { z } from 'zod/v4';
 import { agentAuth } from '../../middleware/agentAuth.js';
+import { checkInvoice, invoiceError400 } from '../../lib/lightning/bolt11.js';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type * as schema from '../../db/schema.js';
 
@@ -45,6 +46,7 @@ export const agentPaymentRoutes: FastifyPluginAsync = async (fastify) => {
             final_rail: z.enum(['lightning', 'cashu']).optional(),
             fallback_occurred: z.boolean().optional(),
           }),
+          400: invoiceError400,
         },
       },
     },
@@ -52,6 +54,17 @@ export const agentPaymentRoutes: FastifyPluginAsync = async (fastify) => {
       const { id } = request.params;
       const body = request.body;
       const db = app.db as unknown as DB;
+
+      // Reject unusable invoices before policy evaluation, so nothing is reserved or audited
+      if (body.destination_type === 'lightning_invoice') {
+        const check = checkInvoice(body.destination, body.amount_msat);
+        if (!check.ok) {
+          return reply.status(400).send({
+            error: { code: check.code, message: check.message },
+            invoice_amount_msat: check.invoice_amount_msat,
+          });
+        }
+      }
 
       // Process payment — always returns 200 regardless of policy decision.
       // HTTP status reflects request processing success; policy_decision reflects outcome.

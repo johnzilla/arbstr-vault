@@ -20,6 +20,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import * as schema from '../../src/db/schema.js';
 import { buildApp } from '../../src/app.js';
+import { makeInvoice } from '../helpers/invoice.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const MIGRATIONS_FOLDER = join(__dirname, '../../src/db/migrations');
@@ -103,7 +104,7 @@ describe('Complete payment lifecycle end-to-end', () => {
           asset: 'BTC_simulated',
           purpose: 'test payment without policy',
           destination_type: 'lightning_invoice',
-          destination: 'lnbc...',
+          destination: makeInvoice({ amountMsat: 1_000 }),
         },
       });
       expect(res.statusCode).toBe(200);
@@ -172,7 +173,7 @@ describe('Complete payment lifecycle end-to-end', () => {
           asset: 'BTC_simulated',
           purpose: 'test payment',
           destination_type: 'lightning_invoice',
-          destination: 'lnbc...',
+          destination: makeInvoice({ amountMsat: 25_000 }),
         },
       });
       expect(res.statusCode).toBe(200);
@@ -228,7 +229,7 @@ describe('Complete payment lifecycle end-to-end', () => {
           asset: 'BTC_simulated',
           purpose: 'over-limit payment',
           destination_type: 'lightning_invoice',
-          destination: 'lnbc...',
+          destination: makeInvoice({ amountMsat: 60_000 }),
         },
       });
       expect(res.statusCode).toBe(200);
