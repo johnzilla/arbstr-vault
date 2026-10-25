@@ -2,6 +2,7 @@ import type { FastifyPluginAsync } from 'fastify';
 import { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { z } from 'zod/v4';
 import { agentAuth } from '../../middleware/agentAuth.js';
+import { checkInvoice, invoiceError400 } from '../../lib/lightning/bolt11.js';
 import { agentsRepo, policyVersionsRepo } from '../../modules/agents/agents.repo.js';
 import { ledgerRepo } from '../../modules/ledger/ledger.repo.js';
 import { auditRepo } from '../../modules/audit/audit.repo.js';
@@ -40,9 +41,7 @@ export const agentWithdrawalRoutes: FastifyPluginAsync = async (fastify) => {
             status: z.literal('PENDING_APPROVAL'),
             amount_msat: z.number(),
           }),
-          400: z.object({
-            error: z.object({ code: z.string(), message: z.string() }),
-          }),
+          400: invoiceError400,
           403: z.object({
             error: z.object({ code: z.string(), message: z.string() }),
           }),
@@ -55,6 +54,16 @@ export const agentWithdrawalRoutes: FastifyPluginAsync = async (fastify) => {
     async (request, reply) => {
       const { id } = request.params;
       const { destination, amount_msat } = request.body;
+
+      // 0. The destination is the BOLT11 invoice the operator will pay on approval:
+      //    reject unusable invoices before anything is reserved or queued
+      const check = checkInvoice(destination, amount_msat);
+      if (!check.ok) {
+        return reply.status(400).send({
+          error: { code: check.code, message: check.message },
+          invoice_amount_msat: check.invoice_amount_msat,
+        });
+      }
 
       // 1. Generate a unique transaction ID
       const txId = generateTransactionId();

@@ -20,6 +20,7 @@ import { buildApp } from '../../src/app.js';
 import { alertsService } from '../../src/modules/alerts/alerts.service.js';
 import type { FastifyInstance } from 'fastify';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
+import { makeInvoice } from '../helpers/invoice.js';
 
 type Db = BetterSQLite3Database<Record<string, never>>;
 
@@ -121,7 +122,7 @@ async function submitWithdrawal(
   agentId: string,
   token: string,
   amountMsat: number,
-  destination = 'lnbc100u1ptest...',
+  destination = makeInvoice({ amountMsat }),
 ) {
   const res = await app.inject({
     method: 'POST',

@@ -125,6 +125,15 @@ New agents start with a deny-all policy. The policy body takes `max_transaction_
 
 Agent tokens start with `vtk_` and only work for their own `:id` (another agent's id returns 403).
 
+Lightning destinations — `/pay` with `destination_type: "lightning_invoice"`, and every withdrawal — must be a BOLT11 invoice for exactly `amount_msat`. The ledger debits `amount_msat` while Lightning pays the invoice's own amount, so anything else is refused with `400` before policy is checked (nothing is reserved, audited or queued):
+
+| `error.code` | Cause |
+|--------------|-------|
+| `invalid_invoice` | Not a parseable BOLT11 invoice |
+| `invoice_amount_required` | Invoice has no amount |
+| `invoice_expired` | Invoice has expired |
+| `invoice_amount_mismatch` | Invoice amount differs from `amount_msat` (the response includes `invoice_amount_msat`) |
+
 ### Internal Billing Endpoints
 
 Requires `VAULT_INTERNAL_TOKEN` to be configured. Authenticated via `X-Internal-Token` header.
