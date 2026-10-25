@@ -4,6 +4,7 @@ import {
   getWalletInfo,
 } from 'lightning';
 import type { AuthenticatedLnd } from 'lightning';
+import { logger } from '../logger.js';
 
 export type { AuthenticatedLnd };
 
@@ -86,8 +87,8 @@ export async function connectWithRetry(opts: {
   const RETRY_DELAYS_MS = [1000, 2000, 4000, 8000, 16000];
   const MAX_RETRIES = 5;
   const log = opts.logger ?? {
-    warn: (msg: string) => console.warn(msg),
-    error: (msg: string) => console.error(msg),
+    warn: (msg: string) => logger.warn(msg),
+    error: (msg: string) => logger.error(msg),
   };
 
   let lastError: Error | undefined;

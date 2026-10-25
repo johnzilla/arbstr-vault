@@ -6,6 +6,7 @@ import { ledgerRepo } from '../../modules/ledger/ledger.repo.js';
 import { auditRepo } from '../../modules/audit/audit.repo.js';
 import { config } from '../../config.js';
 import type { WalletBackend } from '../../modules/payments/wallet/wallet.interface.js';
+import { logger } from '../logger.js';
 
 // Narrow DB type — matches ledger.repo.ts and audit.repo.ts
 type Db = BetterSQLite3Database<Record<string, never>>;
@@ -42,7 +43,7 @@ export async function initializeLightningBackend(db: Db): Promise<WalletBackend>
     if (!payment.payment_hash) {
       // Crashed BEFORE LND send (RESERVE written, no payment_hash means LND never received it)
       // The HTLC was never initiated — safe to write RELEASE immediately
-      console.warn(
+      logger.warn(
         `[LND startup] Crash recovery: RESERVE entry ${payment.id} has no payment_hash — ` +
         `LND never sent this payment. Writing RELEASE to credit back ${payment.amount_msat} msat ` +
         `for agent ${payment.agent_id}.`,
@@ -83,14 +84,14 @@ export async function initializeLightningBackend(db: Db): Promise<WalletBackend>
 
     const sub = subscribeToPastPayment({ lnd, id: paymentRef.payment_hash! });
 
-    console.info(
+    logger.info(
       `[LND startup] Crash recovery: re-subscribing to in-flight payment ` +
       `${paymentRef.payment_hash} (txId: ${paymentRef.ref_id ?? paymentRef.id})`,
     );
 
     sub.on('confirmed', ({ fee_mtokens }: { fee_mtokens: string }) => {
       const feeMsat = Number(fee_mtokens);
-      console.info(
+      logger.info(
         `[LND startup] Crash recovery: payment ${paymentRef.payment_hash} confirmed ` +
         `(fee: ${feeMsat} msat) — writing PAYMENT_SETTLED audit`,
       );
@@ -125,15 +126,15 @@ export async function initializeLightningBackend(db: Db): Promise<WalletBackend>
           }
         }, { behavior: 'immediate' });
       } catch (err) {
-        console.error(
+        logger.error(
+          { err },
           `[LND startup] Crash recovery: failed to write PAYMENT_SETTLED for ${paymentRef.payment_hash}`,
-          err,
         );
       }
     });
 
     sub.on('failed', () => {
-      console.info(
+      logger.info(
         `[LND startup] Crash recovery: payment ${paymentRef.payment_hash} failed — ` +
         `writing RELEASE + PAYMENT_FAILED audit`,
       );
@@ -166,9 +167,9 @@ export async function initializeLightningBackend(db: Db): Promise<WalletBackend>
           });
         }, { behavior: 'immediate' });
       } catch (err) {
-        console.error(
+        logger.error(
+          { err },
           `[LND startup] Crash recovery: failed to write RELEASE for ${paymentRef.payment_hash}`,
-          err,
         );
       }
     });
@@ -176,10 +177,10 @@ export async function initializeLightningBackend(db: Db): Promise<WalletBackend>
     sub.on('error', (err: Error) => {
       // Stream error during crash recovery — log it and leave PENDING
       // Will retry on next restart via the same mechanism
-      console.error(
+      logger.error(
+        { err },
         `[LND startup] Crash recovery: stream error for ${paymentRef.payment_hash} — ` +
         `leaving PENDING, will retry on next restart`,
-        err,
       );
     });
   }

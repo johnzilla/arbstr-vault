@@ -1,5 +1,5 @@
 import { ulid } from 'ulidx';
-import { createHash } from 'crypto';
+import { createHash, randomBytes } from 'crypto';
 
 // Branded type aliases with prefixes
 export type AgentId = `ag_${string}`;
@@ -20,8 +20,10 @@ export function generatePolicyId(): PolicyId {
   return `pl_${ulid()}`;
 }
 
+// 256 random bits. Tokens are looked up by their SHA-256 hash, so tokens issued
+// in the earlier vtk_<ULID> format (80 random bits) keep working.
 export function generateAgentToken(): TokenId {
-  return `vtk_${ulid()}`;
+  return `vtk_${randomBytes(32).toString('base64url')}`;
 }
 
 // Hash a raw token for secure storage

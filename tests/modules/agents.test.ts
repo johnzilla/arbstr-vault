@@ -7,6 +7,7 @@ import { dirname, join } from 'path';
 import * as schema from '../../src/db/schema.js';
 import { buildApp } from '../../src/app.js';
 import type { FastifyInstance } from 'fastify';
+import { hashToken } from '../../src/modules/tokens/tokens.service.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const MIGRATIONS_FOLDER = join(__dirname, '../../src/db/migrations');
@@ -35,11 +36,45 @@ function buildTestApp() {
 
 describe('Agent Management API', () => {
   let app: FastifyInstance;
+  let db: ReturnType<typeof createTestDb>;
 
   beforeEach(async () => {
     const result = buildTestApp();
     app = result.app;
+    db = result.db;
     await app.ready();
+  });
+
+  const balanceStatus = async (agentId: string, token: string) =>
+    (await app.inject({
+      method: 'GET',
+      url: `/agents/${agentId}/balance`,
+      headers: { authorization: `Bearer ${token}` },
+    })).statusCode;
+
+  it('issues 256-bit agent tokens that authenticate', async () => {
+    const tokens = new Set<string>();
+    for (const name of ['Token Agent A', 'Token Agent B']) {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/agents',
+        headers: { authorization: `Bearer ${TEST_ADMIN_TOKEN}` },
+        payload: { name },
+      });
+      const { agent_id, token } = res.json() as { agent_id: string; token: string };
+      // 32 random bytes, base64url: 43 characters
+      expect(token).toMatch(/^vtk_[A-Za-z0-9_-]{43}$/);
+      expect(await balanceStatus(agent_id, token)).toBe(200);
+      tokens.add(token);
+    }
+    expect(tokens.size).toBe(2);
+  });
+
+  it('still accepts tokens issued in the earlier vtk_<ULID> format', async () => {
+    const legacy = 'vtk_01M5Q17JSD3KJC35HK5N5HH0AB';
+    db.insert(schema.agents).values({ id: 'ag_legacy', name: 'Legacy Agent', token_hash: hashToken(legacy) }).run();
+    expect(await balanceStatus('ag_legacy', legacy)).toBe(200);
+    expect(await balanceStatus('ag_legacy', 'vtk_01M5Q17JSD3KJC35HK5N5HH0AC')).toBe(401);
   });
 
   // ------------------------------------------------------------------

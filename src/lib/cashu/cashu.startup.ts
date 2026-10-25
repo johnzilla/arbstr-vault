@@ -5,6 +5,7 @@ import { cashuRepo } from '../../modules/cashu/cashu.repo.js';
 import { auditRepo } from '../../modules/audit/audit.repo.js';
 import { config } from '../../config.js';
 import type { WalletBackend } from '../../modules/payments/wallet/wallet.interface.js';
+import { logger } from '../logger.js';
 
 type Db = BetterSQLite3Database<Record<string, never>>;
 
@@ -31,7 +32,7 @@ export async function initializeCashuBackend(db: Db): Promise<WalletBackend> {
   // ---------------------------------------------------------------------------
   const client = new CashuClient(config.CASHU_MINT_URL!);
   await client.initialize();
-  console.info('[Cashu startup] Connected to mint:', config.CASHU_MINT_URL);
+  logger.info({ mint_url: config.CASHU_MINT_URL }, '[Cashu startup] Connected to mint');
 
   // ---------------------------------------------------------------------------
   // Step 2: Crash recovery — process all PENDING Cashu operations
@@ -48,7 +49,7 @@ export async function initializeCashuBackend(db: Db): Promise<WalletBackend> {
   // ---------------------------------------------------------------------------
   const pending = cashuRepo.getPendingOperations(db);
   if (pending.length > 0) {
-    console.info(`[Cashu startup] Crash recovery: ${pending.length} PENDING operation(s) found`);
+    logger.info(`[Cashu startup] Crash recovery: ${pending.length} PENDING operation(s) found`);
   }
 
   for (const op of pending) {
@@ -60,7 +61,7 @@ export async function initializeCashuBackend(db: Db): Promise<WalletBackend> {
         if (quoteStatus.state === 'PAID') {
           // Melt succeeded — proofs were spent. Release the PENDING lock.
           cashuRepo.releaseProofs(db, [op.secret]);
-          console.info(
+          logger.info(
             `[Cashu startup] Crash recovery: melt ${op.melt_quote_id} confirmed PAID — released lock for ${op.tx_id}`,
           );
         } else if (quoteStatus.state === 'UNPAID') {
@@ -70,12 +71,12 @@ export async function initializeCashuBackend(db: Db): Promise<WalletBackend> {
           // A more robust implementation would also restore the proofs here using NUT-07,
           // but for now we release the lock and log the situation.
           cashuRepo.releaseProofs(db, [op.secret]);
-          console.warn(
+          logger.warn(
             `[Cashu startup] Crash recovery: melt ${op.melt_quote_id} UNPAID — releasing lock for ${op.tx_id}`,
           );
         } else {
           // PENDING state at mint — leave our lock, will retry next startup
-          console.info(
+          logger.info(
             `[Cashu startup] Crash recovery: melt ${op.melt_quote_id} still PENDING at mint — skipping ${op.tx_id}`,
           );
         }
@@ -83,12 +84,12 @@ export async function initializeCashuBackend(db: Db): Promise<WalletBackend> {
         // No melt_quote_id — crashed before the melt call was made.
         // The proofs were locked but melt was never initiated — safe to release.
         cashuRepo.releaseProofs(db, [op.secret]);
-        console.warn(
+        logger.warn(
           `[Cashu startup] Crash recovery: no melt_quote_id for ${op.tx_id} — releasing lock (crashed before melt)`,
         );
       }
     } catch (err) {
-      console.error(`[Cashu startup] Crash recovery error for ${op.tx_id}:`, err);
+      logger.error({ err }, `[Cashu startup] Crash recovery error for ${op.tx_id}`);
       // Leave PENDING — will retry next startup (mint may be temporarily unavailable)
     }
   }
@@ -120,7 +121,7 @@ export async function initializeCashuBackend(db: Db): Promise<WalletBackend> {
     const inactiveProofs = allProofs.filter((p) => !activeKeysetIds.has(p.keyset_id));
 
     if (inactiveProofs.length > 0) {
-      console.info(
+      logger.info(
         `[Cashu startup] Keyset rotation: ${inactiveProofs.length} proof(s) from inactive keysets — swapping`,
       );
 
@@ -161,14 +162,14 @@ export async function initializeCashuBackend(db: Db): Promise<WalletBackend> {
         });
       }, { behavior: 'immediate' });
 
-      console.info(
+      logger.info(
         `[Cashu startup] Keyset rotation: swapped ${inactiveProofs.length} proof(s) to ${newProofs.length} new proof(s)`,
       );
     } else {
-      console.info('[Cashu startup] Keyset rotation: all proofs are on active keysets — no rotation needed');
+      logger.info('[Cashu startup] Keyset rotation: all proofs are on active keysets — no rotation needed');
     }
   } catch (err) {
-    console.error('[Cashu startup] Keyset rotation check failed:', err);
+    logger.error({ err }, '[Cashu startup] Keyset rotation check failed');
     // Non-fatal — old keyset proofs still work as melt inputs; swap will be retried next startup
   }
 
