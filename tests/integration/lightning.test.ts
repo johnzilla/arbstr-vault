@@ -165,6 +165,44 @@ describe('LightningWallet — mock subscribeToPayViaRequest', () => {
     expect(result.mode).toBe('lightning');
   });
 
+  it('fee units: msat maps 1:1 to the library\'s mtokens (no x1000 conversion)', async () => {
+    // The `lightning` library's mtokens ARE millisatoshis (tokens = sats).
+    // A 2.5 sat fee cap is 2_500 msat = 2_500 mtokens, and a reported fee of
+    // 1_234 mtokens is 1_234 msat (1.234 sat). Converting by 1000 in either
+    // direction would make the cap 1000x too loose and under-record fees.
+    const wallet = new LightningWallet(mockLnd as never);
+    mockSubscribeToPayViaRequest.mockReturnValue(
+      createMockSubscription([
+        { event: 'paying', data: { id: 'feeunits' } },
+        { event: 'confirmed', data: { id: 'feeunits', fee_mtokens: '1234' } },
+      ]),
+    );
+
+    const result = await wallet.pay({ ...makePaymentRequest(), max_fee_msat: 2_500 });
+
+    expect(mockSubscribeToPayViaRequest).toHaveBeenCalledWith(
+      expect.objectContaining({ max_fee_mtokens: '2500' }),
+    );
+    expect(result.fee_msat).toBe(1_234);
+  });
+
+  it('fee units: default fee cap is 1 sat (1000 msat = 1000 mtokens)', async () => {
+    const wallet = new LightningWallet(mockLnd as never);
+    mockSubscribeToPayViaRequest.mockReturnValue(
+      createMockSubscription([
+        { event: 'paying', data: { id: 'feedefault' } },
+        { event: 'confirmed', data: { id: 'feedefault', fee_mtokens: '0' } },
+      ]),
+    );
+
+    const { max_fee_msat: _omit, ...req } = makePaymentRequest();
+    await wallet.pay(req);
+
+    expect(mockSubscribeToPayViaRequest).toHaveBeenCalledWith(
+      expect.objectContaining({ max_fee_mtokens: '1000' }),
+    );
+  });
+
   it('2. FAILED payment flow — emits paying then failed', async () => {
     const wallet = new LightningWallet(mockLnd as never);
     const paymentHash = 'deadbeef01020304';
