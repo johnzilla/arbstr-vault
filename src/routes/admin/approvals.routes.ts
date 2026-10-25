@@ -34,7 +34,7 @@ export const adminApprovalsRoutes: FastifyPluginAsync = async (fastify) => {
             transaction_id: z.string(),
             agent_id: z.string(),
             amount_msat: z.number(),
-            payment_status: z.enum(['SETTLED', 'FAILED']),
+            payment_status: z.enum(['SETTLED', 'FAILED', 'PENDING']),
           }),
           404: z.object({
             error: z.object({ code: z.string(), message: z.string() }),

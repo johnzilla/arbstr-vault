@@ -125,21 +125,24 @@ export function createPaymentsService(walletOrOptions: WalletBackend | PaymentsS
 
   return {
     /**
-     * Execute a wallet payment after an operator approves a pending approval.
+     * Execute a payment or withdrawal after an operator approves it.
      *
-     * The RESERVE ledger entry was already written when REQUIRE_HUMAN_APPROVAL was triggered.
-     * This method:
-     *   1. Calls the simulated wallet to execute the payment
-     *   2. On SETTLED: writes RELEASE (cancels RESERVE) + PAYMENT (actual debit) + PAYMENT_SETTLED audit
-     *   3. On FAILED: writes RELEASE (restores reserved balance) + PAYMENT_FAILED audit
+     * The RESERVE (id = transactionId) was written when the approval was queued
+     * and holds the funds. The rail is chosen like /pay (selectRail with the
+     * configured wallets and CASHU_THRESHOLD_MSAT; no agent hint, no fallback —
+     * the operator approved one payment, so it is not retried on another rail).
+     * Real rails pay the stored destination, which must be a BOLT11 invoice.
      *
-     * Net ledger effect for settled approval:
-     *   RESERVE: -amount_msat (written at PENDING_APPROVAL time)
-     *   RELEASE: +amount_msat (cancels the hold)
-     *   PAYMENT: -amount_msat (the actual payment debit)
-     *   Net: -amount_msat (agent spent the payment amount)
+     * Ledger effect per outcome:
+     *   lightning SETTLED  RESERVE stays as the debit (as in /pay), payment_hash stored, fee as PAYMENT
+     *   cashu / simulated  PAYMENT (-amount) + RELEASE (+amount) cancelling the hold, fee as PAYMENT
+     *   FAILED             RELEASE (+amount) + PAYMENT_FAILED audit
+     *   PENDING            lightning stream error: the payment may still be in flight, so the
+     *                      RESERVE is kept (mode 'lightning', payment_hash stored) and startup
+     *                      recovery settles or releases it via TrackPaymentV2
      *
-     * Fail-closed: any unexpected error writes RELEASE + PAYMENT_FAILED and returns FAILED.
+     * Fail-closed: an unexpected error writes RELEASE + PAYMENT_FAILED and returns FAILED,
+     * except once a Lightning payment may be in flight.
      */
     async executeApprovedPayment(
       db: DB,
@@ -147,114 +150,166 @@ export function createPaymentsService(walletOrOptions: WalletBackend | PaymentsS
       transactionId: string,
       amountMsat: number,
       destination: string | null,
-    ): Promise<{ status: 'SETTLED' | 'FAILED'; payment_hash?: string; fee_msat?: number }> {
-      try {
-        const walletReq = {
-          amount_msat: amountMsat,
-          asset: 'BTC_simulated',
-          purpose: 'approved_payment',
-          destination_type: 'internal',
-          destination: destination ?? 'approved',
-          transaction_id: transactionId as TransactionId,
-          max_fee_msat: 1000,
-        };
+    ): Promise<{
+      status: 'SETTLED' | 'FAILED' | 'PENDING';
+      rail: 'lightning' | 'cashu' | 'simulated';
+      payment_hash?: string;
+      fee_msat?: number;
+    }> {
+      const rail = selectRail(
+        amountMsat,
+        undefined,
+        config.CASHU_THRESHOLD_MSAT,
+        !!options.lightningWallet,
+        !!options.cashuWallet,
+      );
+      const wallet =
+        rail === 'lightning' ? options.lightningWallet!
+        : rail === 'cashu' ? options.cashuWallet!
+        : options.simulatedWallet;
 
-        let walletResult: PaymentResult;
-        try {
-          walletResult = await options.simulatedWallet.pay(walletReq);
-        } catch (_walletErr) {
-          // Treat wallet call exceptions as FAILED
-          walletResult = { transaction_id: transactionId as TransactionId, status: 'FAILED', mode: 'simulated' };
-        }
-
-        if (walletResult.status === 'SETTLED') {
-          db.transaction((tx) => {
-            const tdb = tx as unknown as Db;
-
-            // Write PAYMENT entry — the actual debit (do NOT reuse transactionId as id,
-            // the RESERVE already owns that id; let drizzle auto-generate a new id)
-            ledgerRepo.insert(tdb, {
-              agent_id: agentId,
-              amount_msat: -amountMsat,
-              entry_type: 'PAYMENT',
-              ref_id: transactionId,
-              mode: 'simulated',
-            });
-
-            // Write RELEASE to cancel the original RESERVE (net: RESERVE + RELEASE = 0)
-            ledgerRepo.insert(tdb, {
-              agent_id: agentId,
-              amount_msat: amountMsat,
-              entry_type: 'RELEASE',
-              ref_id: transactionId,
-              mode: 'simulated',
-            });
-
-            // Write PAYMENT_SETTLED audit entry
-            auditRepo.insert(tdb, {
-              agent_id: agentId,
-              action: 'PAYMENT_SETTLED',
-              amount_msat: amountMsat,
-              ref_id: transactionId,
-              metadata: { approval_execution: true },
-            });
-          }, { behavior: 'immediate' });
-
-          // Post-settlement balance alert check
-          alertsService.checkAndNotify(db as unknown as Db, agentId).catch(() => {});
-
-          return { status: 'SETTLED' };
-        }
-
-        // FAILED path — write RELEASE to restore reserved balance + PAYMENT_FAILED audit
+      const fail = (error: string, paymentHash?: string) => {
         db.transaction((tx) => {
           const tdb = tx as unknown as Db;
-
           ledgerRepo.insert(tdb, {
             agent_id: agentId,
             amount_msat: amountMsat,
             entry_type: 'RELEASE',
             ref_id: transactionId,
-            mode: 'simulated',
+            payment_hash: paymentHash,
+            mode: rail,
           });
-
           auditRepo.insert(tdb, {
             agent_id: agentId,
             action: 'PAYMENT_FAILED',
             amount_msat: amountMsat,
             ref_id: transactionId,
-            metadata: { approval_execution: true, error: 'wallet_failed' },
+            metadata: { approval_execution: true, rail, error, payment_hash: paymentHash ?? null },
           });
         }, { behavior: 'immediate' });
+        return { status: 'FAILED' as const, rail, payment_hash: paymentHash };
+      };
 
-        return { status: 'FAILED' };
-      } catch (err) {
-        // Fail-closed: any unexpected error — write RELEASE + PAYMENT_FAILED and return FAILED
-        console.error('[paymentsService] executeApprovedPayment error', { agentId, transactionId, error: err });
-        try {
+      let lightningInFlight = false;
+      try {
+        if (rail !== 'simulated' && !destination) {
+          return fail('missing_destination');
+        }
+
+        // Fee cap from the agent's current policy, as in /pay (default 1 sat)
+        const maxFeeMsat =
+          policyVersionsRepo.getVersionAt(db, agentId, Date.now())?.max_fee_msat ?? 1000;
+
+        const walletReq = {
+          amount_msat: amountMsat,
+          asset: rail === 'simulated' ? 'BTC_simulated' : rail === 'lightning' ? 'BTC_lightning' : 'BTC_cashu',
+          purpose: 'approved_payment',
+          destination_type: rail === 'simulated' ? 'internal' : 'lightning_invoice',
+          destination: destination ?? 'approved',
+          transaction_id: transactionId as TransactionId,
+          max_fee_msat: maxFeeMsat,
+        };
+
+        if (rail === 'lightning') {
+          // The approval hold becomes the in-flight Lightning reserve that startup
+          // recovery tracks (withdrawal holds are written as 'simulated')
           db.transaction((tx) => {
-            const tdb = tx as unknown as Db;
+            ledgerRepo.updateMode(tx as unknown as Db, transactionId, 'lightning');
+          }, { behavior: 'immediate' });
+          lightningInFlight = true;
+        }
 
+        let walletResult: PaymentResult;
+        try {
+          walletResult = await wallet.pay(walletReq);
+        } catch (walletErr) {
+          if (walletErr instanceof LightningStreamError) {
+            // May still be in flight: keep the hold; recovery resolves it
+            if (walletErr.payment_hash) {
+              db.transaction((tx) => {
+                ledgerRepo.updatePaymentHash(tx as unknown as Db, transactionId, walletErr.payment_hash!);
+              }, { behavior: 'immediate' });
+            }
+            return { status: 'PENDING', rail, payment_hash: walletErr.payment_hash };
+          }
+          lightningInFlight = false;
+          return fail('wallet_error');
+        }
+        lightningInFlight = false;
+
+        if (walletResult.status !== 'SETTLED') {
+          return fail('wallet_failed', walletResult.payment_hash);
+        }
+
+        const feeMsat = walletResult.fee_msat ?? 0;
+        db.transaction((tx) => {
+          const tdb = tx as unknown as Db;
+
+          if (rail === 'lightning') {
+            // The RESERVE is the principal debit, as in /pay
+            if (walletResult.payment_hash) {
+              ledgerRepo.updatePaymentHash(tdb, transactionId, walletResult.payment_hash);
+            }
+          } else {
+            // Do NOT reuse transactionId as id: the RESERVE owns it
+            ledgerRepo.insert(tdb, {
+              agent_id: agentId,
+              amount_msat: -amountMsat,
+              entry_type: 'PAYMENT',
+              ref_id: transactionId,
+              mode: rail,
+            });
             ledgerRepo.insert(tdb, {
               agent_id: agentId,
               amount_msat: amountMsat,
               entry_type: 'RELEASE',
               ref_id: transactionId,
-              mode: 'simulated',
+              mode: rail,
             });
+          }
 
-            auditRepo.insert(tdb, {
+          if (feeMsat > 0) {
+            ledgerRepo.insert(tdb, {
               agent_id: agentId,
-              action: 'PAYMENT_FAILED',
-              amount_msat: amountMsat,
+              amount_msat: -feeMsat,
+              entry_type: 'PAYMENT',
               ref_id: transactionId,
-              metadata: { approval_execution: true, error: 'internal_error' },
+              payment_hash: walletResult.payment_hash,
+              mode: rail,
             });
-          }, { behavior: 'immediate' });
+          }
+
+          auditRepo.insert(tdb, {
+            agent_id: agentId,
+            action: 'PAYMENT_SETTLED',
+            amount_msat: amountMsat,
+            ref_id: transactionId,
+            metadata: {
+              approval_execution: true,
+              rail,
+              payment_hash: walletResult.payment_hash ?? null,
+              cashu_token_id: walletResult.cashu_token_id,
+              fee_msat: feeMsat,
+            },
+          });
+        }, { behavior: 'immediate' });
+
+        // Post-settlement balance alert check
+        alertsService.checkAndNotify(db as unknown as Db, agentId).catch(() => {});
+
+        return { status: 'SETTLED', rail, payment_hash: walletResult.payment_hash, fee_msat: feeMsat };
+      } catch (err) {
+        console.error('[paymentsService] executeApprovedPayment error', { agentId, transactionId, error: err });
+        if (lightningInFlight) {
+          // Never release a hold that may back an in-flight HTLC; recovery resolves it
+          return { status: 'PENDING', rail };
+        }
+        try {
+          return fail('internal_error');
         } catch (_innerErr) {
           // Best-effort — ignore secondary failure
+          return { status: 'FAILED', rail };
         }
-        return { status: 'FAILED' };
       }
     },
 

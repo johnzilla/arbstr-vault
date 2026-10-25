@@ -123,6 +123,17 @@ export const ledgerRepo = {
    * @param entryId - The ledger entry ID (same as txId for RESERVE entries)
    * @param paymentHash - LND payment hash hex string from 'paying' event
    */
+  /**
+   * Set an entry's payment rail. Used when an approval's hold becomes the
+   * in-flight reserve for a Lightning payment, so crash recovery tracks it.
+   */
+  updateMode(db: Db, entryId: string, mode: 'simulated' | 'lightning' | 'cashu'): void {
+    db.update(ledgerEntries)
+      .set({ mode })
+      .where(eq(ledgerEntries.id, entryId))
+      .run();
+  },
+
   updatePaymentHash(db: Db, entryId: string, paymentHash: string): void {
     db.update(ledgerEntries)
       .set({ payment_hash: paymentHash })
@@ -183,6 +194,11 @@ export const ledgerRepo = {
             SELECT ref_id FROM ${ledgerEntries} AS le2
             WHERE le2.entry_type IN ('RELEASE', 'PAYMENT')
             AND le2.ref_id IS NOT NULL
+          )`,
+          // A hold for an approval still awaiting the operator is not a payment:
+          // nothing was sent, and releasing it would let the agent spend it twice
+          sql`${ledgerEntries.ref_id} NOT IN (
+            SELECT transaction_id FROM pending_approvals WHERE status = 'pending'
           )`,
         ),
       )
