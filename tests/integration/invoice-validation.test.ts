@@ -16,6 +16,7 @@ import { dirname, join } from 'path';
 import * as schema from '../../src/db/schema.js';
 import { buildApp } from '../../src/app.js';
 import { makeInvoice } from '../helpers/invoice.js';
+import type { WalletBackend } from '../../src/modules/payments/wallet/wallet.interface.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const MIGRATIONS_FOLDER = join(__dirname, '../../src/db/migrations');
@@ -58,11 +59,12 @@ describe('BOLT11 destination validation', () => {
     approvals: app.db.select().from(schema.pendingApprovals).all().length,
   });
 
-  beforeEach(async () => {
+  // Build the app (simulated unless a wallet is given) and a funded agent with a policy
+  const start = async (wallet?: WalletBackend) => {
     const sqlite = new Database(':memory:');
     const db = drizzle({ client: sqlite, schema });
     migrate(db, { migrationsFolder: MIGRATIONS_FOLDER });
-    app = buildApp(db);
+    app = wallet ? buildApp({ db, wallet }) : buildApp(db);
     await app.ready();
 
     const reg = await app.inject({ method: 'POST', url: '/agents', headers: admin, payload: { name: 'Invoice Agent' } });
@@ -72,7 +74,9 @@ describe('BOLT11 destination validation', () => {
       payload: { max_transaction_msat: 1_000_000, daily_limit_msat: 10_000_000 },
     });
     await app.inject({ method: 'POST', url: `/agents/${agentId}/deposit`, headers: admin, payload: { amount_msat: 5_000_000 } });
-  });
+  };
+
+  beforeEach(() => start());
 
   afterEach(async () => {
     await app.close();
@@ -108,7 +112,42 @@ describe('BOLT11 destination validation', () => {
       expect(res.json()).toMatchObject({ policy_decision: 'ALLOW', status: 'SETTLED' });
     });
 
-    it('does not apply to non-invoice destination types', async () => {
+    describe('with a real rail configured', () => {
+      const paid: string[] = [];
+      const lightning: WalletBackend = {
+        async pay(req) {
+          paid.push(req.destination);
+          return { transaction_id: req.transaction_id, status: 'SETTLED', mode: 'lightning', payment_hash: 'mock_hash', fee_msat: 0 };
+        },
+      };
+
+      beforeEach(async () => {
+        paid.length = 0;
+        await app.close();
+        await start(lightning);
+      });
+
+      for (const destinationType of ['cashu_token', 'internal']) {
+        it(`rejects destination_type ${destinationType} with 400 and no side effects`, async () => {
+          const before = sideEffects();
+          const res = await pay('cashuAeyJ0b2tlbiI6W119', AMOUNT, destinationType);
+          expect(res.statusCode).toBe(400);
+          expect(res.json().error.code).toBe('unsupported_destination_type');
+          expect(sideEffects()).toEqual(before);
+          expect(paid).toEqual([]);
+        });
+      }
+
+      it('still pays a lightning_invoice destination', async () => {
+        const invoice = makeInvoice({ amountMsat: AMOUNT });
+        const res = await pay(invoice);
+        expect(res.statusCode).toBe(200);
+        expect(res.json()).toMatchObject({ status: 'SETTLED' });
+        expect(paid).toEqual([invoice]);
+      });
+    });
+
+    it('accepts non-invoice destination types in simulated mode', async () => {
       const res = await pay('test-dest', AMOUNT, 'internal');
       expect(res.statusCode).toBe(200);
     });

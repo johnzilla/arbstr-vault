@@ -78,7 +78,7 @@ docker run -p 3000:3000 -v vault-data:/data -e DATABASE_PATH=/data/vault.db \
 | `CASHU_MINT_URL` | If Cashu | — | Nutshell mint URL |
 | `CASHU_THRESHOLD_MSAT` | No | `1000000` | Auto-routing: below threshold uses Cashu |
 | `OPERATOR_WEBHOOK_URL` | No | — | Webhook URL for operator notifications |
-| `OPERATOR_WEBHOOK_SECRET` | No | — | HMAC-SHA256 secret for webhook signing |
+| `OPERATOR_WEBHOOK_SECRET` | No | — | HMAC-SHA256 secret (min 16 chars) for webhook signing; without it webhooks are unsigned and vault logs a warning at startup |
 | `VAULT_INTERNAL_TOKEN` | No | — | Shared secret (min 32 chars) for internal billing API |
 | `BILLING_RESERVATION_TTL_MS` | No | `900000` | Age at which an unsettled billing reservation is released (min 60000) |
 
@@ -135,6 +135,8 @@ Lightning destinations — `/pay` with `destination_type: "lightning_invoice"`, 
 | `invoice_amount_required` | Invoice has no amount |
 | `invoice_expired` | Invoice has expired |
 | `invoice_amount_mismatch` | Invoice amount differs from `amount_msat` (the response includes `invoice_amount_msat`) |
+
+Both real rails pay BOLT11 invoices (Cashu by melting to one), so with `WALLET_BACKEND` set to `lightning`, `cashu` or `auto`, `/pay` accepts only `destination_type: "lightning_invoice"`. `cashu_token` and `internal` are refused the same way with `400 unsupported_destination_type`; they remain usable in simulated mode.
 
 ### Internal Billing Endpoints
 

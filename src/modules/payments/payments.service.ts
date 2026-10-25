@@ -125,6 +125,13 @@ export function createPaymentsService(walletOrOptions: WalletBackend | PaymentsS
 
   return {
     /**
+     * True when a real rail (Lightning or Cashu) is configured. Both pay a BOLT11
+     * invoice (LND directly, Cashu by melting to it), so other destination types
+     * are only payable in simulated mode.
+     */
+    hasRealRail: !!(options.lightningWallet || options.cashuWallet),
+
+    /**
      * Execute a payment or withdrawal after an operator approves it.
      *
      * The RESERVE (id = transactionId) was written when the approval was queued
