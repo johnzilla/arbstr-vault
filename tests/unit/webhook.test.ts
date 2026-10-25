@@ -16,6 +16,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import * as schema from '../../src/db/schema.js';
 import { createWebhookService } from '../../src/modules/webhook/webhook.service.js';
+import { logger } from '../../src/lib/logger.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const MIGRATIONS_FOLDER = join(__dirname, '../../src/db/migrations');
@@ -128,7 +129,7 @@ describe('operator webhook delivery', () => {
 
   it('resolves even if the audit write fails (DB closed during retries)', async () => {
     fetchMock.mockResolvedValue(new Response(null, { status: 500 }));
-    const errorLog = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const errorLog = vi.spyOn(logger, 'error').mockImplementation(() => {});
     sqlite.close();
 
     await expect(service().send(event, db)).resolves.toBeUndefined();

@@ -13,6 +13,7 @@ import { generateTransactionId, type TransactionId } from '../../types.js';
 import type { PaymentResult } from './wallet/wallet.interface.js';
 import { config } from '../../config.js';
 import { alertsService } from '../alerts/alerts.service.js';
+import { logger } from '../../lib/logger.js';
 
 // Full-schema DB type — matches app.ts and agents.repo.ts
 type DB = BetterSQLite3Database<typeof schema>;
@@ -306,7 +307,7 @@ export function createPaymentsService(walletOrOptions: WalletBackend | PaymentsS
 
         return { status: 'SETTLED', rail, payment_hash: walletResult.payment_hash, fee_msat: feeMsat };
       } catch (err) {
-        console.error('[paymentsService] executeApprovedPayment error', { agentId, transactionId, error: err });
+        logger.error({ agentId, transactionId, err }, '[paymentsService] executeApprovedPayment error');
         if (lightningInFlight) {
           // Never release a hold that may back an in-flight HTLC; recovery resolves it
           return { status: 'PENDING', rail };
@@ -889,7 +890,7 @@ export function createPaymentsService(walletOrOptions: WalletBackend | PaymentsS
       } catch (err) {
         // Service-level fail-closed: any DB error or unexpected exception produces DENY
         // Log for observability without leaking internals
-        console.error('[paymentsService] processPayment error', { agentId, txId, error: err });
+        logger.error({ agentId, txId, err }, '[paymentsService] processPayment error');
         return {
           transaction_id: txId,
           policy_decision: 'DENY',

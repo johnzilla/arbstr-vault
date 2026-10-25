@@ -2,6 +2,7 @@ import { createHmac } from 'crypto';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { config } from '../../config.js';
 import { auditRepo, type AuditEntry } from '../audit/audit.repo.js';
+import { logger } from '../../lib/logger.js';
 
 type Db = BetterSQLite3Database<Record<string, never>>;
 
@@ -81,7 +82,7 @@ export function createWebhookService(deps: WebhookServiceDeps = {}) {
         });
       } catch (err) {
         // The DB may be gone if the server shut down during retries
-        console.error('[webhookService] failed to audit webhook delivery failure', { event: event.event, err });
+        logger.error({ event: event.event, err }, '[webhookService] failed to audit webhook delivery failure');
       }
     },
   };
