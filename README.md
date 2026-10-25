@@ -17,7 +17,7 @@ Built for personal use — the sole customer is the operator plus their own agen
 
 ## How this fits in
 
-arbstr-vault is the treasury half of the [arbstr](https://github.com/johnzilla/arbstr) inference marketplace. arbstr core routes LLM requests to the cheapest qualified provider and calls vault's `/internal/reserve → settle|release` endpoints per request to meter spend against agent sub-accounts. Vault is also usable standalone as a personal agent bank — nothing in this repo depends on arbstr code.
+arbstr-vault is the treasury half of [arbstr](https://github.com/johnzilla/arbstr), a router that sends AI inference to the cheapest provider and meters it in sats. arbstr core routes LLM requests to the cheapest qualified provider and calls vault's `/internal/reserve → settle|release` endpoints per request to meter spend against agent sub-accounts. Vault is also usable standalone as a personal agent bank — nothing in this repo depends on arbstr code.
 
 To run the full stack (core + vault + LND + Cashu mint) with a single `docker compose up`, see [arbstr-node](https://github.com/johnzilla/arbstr-node), which runs the published `ghcr.io/johnzilla/arbstr-vault` image pinned to a [release](https://github.com/johnzilla/arbstr-vault/releases).
 
