@@ -111,6 +111,8 @@ All routes use JSON. Agent routes require a bearer token from registration. Oper
 
 `GET /operator/audit` returns entries newest first, 50 per page (`limit` up to 200), with `next_cursor` for the next page. Filters, all optional and combinable: `agent_id` (use `system` for entries not tied to an agent), `action` (one action or a comma-separated list, e.g. `WEBHOOK_DELIVERY_FAILED,APPROVAL_TIMEOUT`), `ref_id` (a transaction or reservation id), and `start_date` / `end_date` (ms since epoch, inclusive). An unknown action or a reversed range returns 400.
 
+Approving a payment or withdrawal executes it through the configured wallet, with the rail chosen as for `/pay` (`CASHU_THRESHOLD_MSAT` when both rails exist; no fallback to the other rail). Real rails pay the stored destination as a BOLT11 invoice. The approve response's `payment_status` is `SETTLED`, `FAILED` (hold released), or `PENDING` (a Lightning payment that may still be in flight; startup recovery resolves it).
+
 New agents start with a deny-all policy. The policy body takes `max_transaction_msat` and `daily_limit_msat`, plus optional `max_fee_msat`, `approval_timeout_ms` (30s–1h, default 5 min), `alert_floor_msat` and `alert_cooldown_ms` (min 60s) for balance alerts.
 
 ### Agent Endpoints
